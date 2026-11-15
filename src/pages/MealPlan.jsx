@@ -5,7 +5,10 @@ import { toast } from 'react-toastify';
 import api, { showError } from '../api/client';
 import RecipeDrawer from '../components/meal/RecipeDrawer';
 import ShoppingList from '../components/meal/ShoppingList';
-import { isToday, mealStyle, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
+import MealCard from '../components/meal/MealCard';
+import FridgeView from '../components/meal/FridgeView';
+import WeightView from '../components/meal/WeightView';
+import { isToday, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
 import '../components/gym/gym.css';
 import '../components/meal/meal.css';
 
@@ -32,30 +35,6 @@ function MacroBar({ label, unit, value, target }) {
   );
 }
 
-function MealCard({ meal, onOpen }) {
-  const style = mealStyle(meal.type);
-  const preview = meal.ingredients.map((i) => i.name).join(' · ');
-  return (
-    <button className="meal-card" onClick={() => onOpen(meal)}>
-      <div className="meal-card-top">
-        <span className="meal-type" style={{ background: style.bg, color: style.fg }}>{style.icon} {meal.type}</span>
-        <span className="meal-kcal">{Math.round(meal.calories)} kcal</span>
-      </div>
-      <h6 className="meal-name">{meal.name}</h6>
-      {meal.description && <p className="meal-desc">{meal.description}</p>}
-      <p className="meal-ingredients" title={preview}>{preview}</p>
-      <div className="meal-foot">
-        <span className="meal-macros">
-          <span>P {Math.round(meal.protein)}g</span>
-          <span>C {Math.round(meal.carbs)}g</span>
-          <span>G {Math.round(meal.fat)}g</span>
-        </span>
-        <span className="meal-open">{meal.recipe?.steps?.length ? 'Ver receta' : 'Receta'} →</span>
-      </div>
-    </button>
-  );
-}
-
 export default function MealPlan() {
   const [plan, setPlan] = useState(null);
   const [isCurrentWeek, setIsCurrentWeek] = useState(false);
@@ -66,9 +45,16 @@ export default function MealPlan() {
   const [dayIndex, setDayIndex] = useState(0);
   const [view, setView] = useState('week');
   const [openMeal, setOpenMeal] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [mealsPerDay, setMealsPerDay] = useState(4);
+  const [swapping, setSwapping] = useState(null);
   const closeRecipe = useCallback(() => setOpenMeal(null), []);
 
   useEffect(() => {
+    api.get('/profile').then(({ data }) => {
+      setFavorites(data.favorites ?? []);
+      setMealsPerDay(data.profile?.mealsPerDay ?? 4);
+    }).catch(() => {});
     api.get('/mealplans/current')
       .then(({ data }) => {
         setPlan(data.plan);
@@ -78,6 +64,62 @@ export default function MealPlan() {
       .catch((err) => err.response?.status !== 404 && showError(err))
       .finally(() => setLoading(false));
   }, []);
+
+  // ---------- Acciones sobre comidas ----------
+  const replaceInPlan = (mealId, meal, shoppingList) =>
+    setPlan((p) => ({
+      ...p,
+      ...(shoppingList && { shoppingList }),
+      days: p.days.map((d) => ({ ...d, meals: d.meals.map((m) => (m._id === mealId ? meal : m)) })),
+    }));
+
+  const toggleEaten = async (meal) => {
+    replaceInPlan(meal._id, { ...meal, eaten: !meal.eaten }); // optimista
+    try {
+      await api.patch(`/mealplans/${plan._id}/meals/${meal._id}`, { eaten: !meal.eaten });
+    } catch (err) {
+      replaceInPlan(meal._id, meal);
+      showError(err);
+    }
+  };
+
+  const swapMeal = async (meal) => {
+    setSwapping(meal._id);
+    try {
+      const { data } = await api.post(`/mealplans/${plan._id}/meals/${meal._id}/swap`, {});
+      replaceInPlan(meal._id, data.meal, data.shoppingList);
+      toast.success(`Nueva opción: ${data.meal.name}`);
+    } catch (err) {
+      showError(err);
+    } finally {
+      setSwapping(null);
+    }
+  };
+
+  const useInPlan = async (meal, newMeal) => {
+    const { data } = await api.put(`/mealplans/${plan._id}/meals/${meal._id}`, { meal: newMeal });
+    replaceInPlan(meal._id, data.meal, data.shoppingList);
+  };
+
+  const favByName = (name) => favorites.find((f) => f.name.toLowerCase() === name?.toLowerCase());
+  const toggleFavorite = async (meal) => {
+    try {
+      const fav = favByName(meal.name);
+      if (fav) {
+        const { data } = await api.delete(`/profile/favorites/${fav._id}`);
+        setFavorites(data);
+      } else {
+        const { _id: _id1, eaten: _e, recipe: _r, ...rest } = meal;
+        const { data } = await api.post('/profile/favorites', {
+          meal: { ...rest, ingredients: rest.ingredients.map(({ name, amount, unit, quantity, section }) => ({ name, amount, unit, quantity, section })) },
+        });
+        setFavorites(data);
+        toast.success('⭐ Guardada: la IA la va a incluir en tus próximos planes');
+      }
+    } catch (err) {
+      showError(err);
+    }
+  };
 
   const addChip = (text) => setFeedback((f) => (f.toLowerCase().includes(text.toLowerCase()) ? f : f ? `${f}, ${text.toLowerCase()}` : text));
 
@@ -149,6 +191,11 @@ export default function MealPlan() {
 
   const day = plan.days[Math.min(dayIndex, plan.days.length - 1)];
   const totals = sumMacros(day.meals);
+  const allMeals = plan.days.flatMap((d) => d.meals);
+  const eatenCount = allMeals.filter((m) => m.eaten).length;
+  const dayEaten = day.meals.filter((m) => m.eaten).length;
+  const todayMeals = plan.days[todayIndex(plan.days)]?.meals ?? [];
+  const types = plan.days[0]?.meals.map((m) => m.type) ?? [];
 
   return (
     <div className="meal-page">
@@ -159,6 +206,9 @@ export default function MealPlan() {
           <h1 className="page-title-sm">Plan semanal</h1>
           <div className="gym-meta">
             <span>Semana del {fmtWeek(plan.weekStart)}</span>
+            <span className="gym-badge" title="Comidas marcadas como hechas">
+              ✓ {eatenCount}/{allMeals.length} hechas · {allMeals.length ? Math.round((eatenCount / allMeals.length) * 100) : 0}%
+            </span>
             {plan.feedback && <span className="gym-badge" title={plan.feedback}>✎ con tus pedidos</span>}
           </div>
         </div>
@@ -174,47 +224,73 @@ export default function MealPlan() {
           <Button size="sm" onClick={() => setShowGenerate(true)}>Generar</Button>
         </div>
       )}
-      {generating && <div className="meal-banner"><Spinner size="sm" /><div>Armando tu semana con IA… tarda entre 15 y 40 segundos.</div></div>}
+      {generating && <div className="meal-banner"><Spinner size="sm" /><div>Armando tu semana con IA y ajustando porciones… tarda entre 20 y 50 segundos.</div></div>}
 
       {/* Vistas */}
       <div className="gym-views">
         <button className={`gym-view ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>▦ Semana</button>
         <button className={`gym-view ${view === 'shopping' ? 'active' : ''}`} onClick={() => setView('shopping')}>
-          🛒 Lista de compras <span className="gym-badge">{plan.shoppingList.length}</span>
+          🛒 Compras <span className="gym-badge">{plan.shoppingList.length}</span>
         </button>
+        <button className={`gym-view ${view === 'fridge' ? 'active' : ''}`} onClick={() => setView('fridge')}>🧊 ¿Qué cocino?</button>
+        <button className={`gym-view ${view === 'weight' ? 'active' : ''}`} onClick={() => setView('weight')}>⚖️ Peso</button>
       </div>
 
-      {view === 'week' ? (
+      {view === 'week' && (
         <>
-          {/* Días */}
           <div className="meal-days">
             {plan.days.map((d, i) => {
               const kcal = Math.round(sumMacros(d.meals).calories);
+              const done = d.meals.length && d.meals.every((m) => m.eaten);
               return (
-                <button key={d.day} className={`meal-day ${i === dayIndex ? 'active' : ''}`} onClick={() => setDayIndex(i)}>
+                <button key={d.day} className={`meal-day ${i === dayIndex ? 'active' : ''} ${done ? 'done' : ''}`} onClick={() => setDayIndex(i)}>
                   <span className="meal-day-name">{shortDay(d.day)}</span>
-                  <span className="meal-day-kcal">{kcal}</span>
+                  <span className="meal-day-kcal">{done ? '✓ completo' : kcal}</span>
                   {isToday(d.day) && <span className="meal-day-today">hoy</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* Resumen del día vs objetivo */}
           <div className="macro-grid">
             {MACROS.map(([k, label, unit]) => (
               <MacroBar key={k} label={label} unit={unit} value={totals[k]} target={plan.targets[k]} />
             ))}
           </div>
 
-          <h5 className="meal-day-title">{day.day}</h5>
+          <h5 className="meal-day-title">
+            {day.day} <span className="text-muted fw-normal small">· {dayEaten} de {day.meals.length} hechas</span>
+          </h5>
           <div className="meal-grid">
-            {day.meals.map((m) => <MealCard key={m._id} meal={m} onOpen={setOpenMeal} />)}
+            {day.meals.map((m) => (
+              <MealCard
+                key={m._id}
+                meal={m}
+                onOpen={setOpenMeal}
+                onToggleEaten={() => toggleEaten(m)}
+                isFavorite={!!favByName(m.name)}
+                onToggleFavorite={() => toggleFavorite(m)}
+                onSwap={() => swapMeal(m)}
+                swapping={swapping === m._id}
+              />
+            ))}
           </div>
         </>
-      ) : (
-        <ShoppingList planId={plan._id} items={plan.shoppingList} />
       )}
+
+      {view === 'shopping' && <ShoppingList planId={plan._id} items={plan.shoppingList} />}
+
+      {view === 'fridge' && (
+        <FridgeView
+          types={types.length ? types : ['desayuno', 'almuerzo', 'merienda', 'cena'].slice(0, mealsPerDay)}
+          todayMeals={todayMeals}
+          onUseInPlan={useInPlan}
+          isFavorite={(name) => !!favByName(name)}
+          onToggleFavorite={toggleFavorite}
+        />
+      )}
+
+      {view === 'weight' && <WeightView onTargetsChange={() => {}} />}
 
       <RecipeDrawer planId={plan._id} meal={openMeal} onClose={closeRecipe} />
       {generateModal}
