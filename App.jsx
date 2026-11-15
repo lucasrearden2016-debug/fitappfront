@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import NavBar from './components/NavBar';
 import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
@@ -14,6 +15,7 @@ export default function App() {
       <NavBar />
       <Container className="py-4">
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route element={<ProtectedRoute />}>
@@ -21,7 +23,7 @@ export default function App() {
             <Route path="/plan" element={<MealPlan />} />
             <Route path="/gym" element={<Gym />} />
           </Route>
-          <Route path="*" element={<Navigate to="/plan" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Container>
     </>
