@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     // Codespaces expone el puerto con un dominio *.app.github.dev
     allowedHosts: ['.app.github.dev'],
-    // En desarrollo, /api se reenvía al backend (sin CORS ni URLs absolutas)
-    proxy: { '/api': 'http://localhost:3000' },
+    // En Codespaces el navegador entra por HTTPS (puerto 443)
+    hmr: process.env.CODESPACES ? { clientPort: 443 } : undefined,
   },
 });

@@ -9,20 +9,22 @@ export default function NavBar() {
   const navigate = useNavigate();
 
   return (
-    <Navbar bg="dark" data-bs-theme="dark" expand="md">
+    <Navbar expand="md" className="app-navbar">
       <Container>
-        <Navbar.Brand as={NavLink} to="/">💪 FitApp</Navbar.Brand>
+        <Navbar.Brand as={NavLink} to="/">
+          <span className="app-logo">F</span> fitapp
+        </Navbar.Brand>
         {user && (
           <>
             <Navbar.Toggle />
             <Navbar.Collapse>
-              <Nav className="me-auto">
+              <Nav className="me-auto gap-1">
                 <Nav.Link as={NavLink} to="/plan">Plan de comidas</Nav.Link>
                 <Nav.Link as={NavLink} to="/gym">Gimnasio</Nav.Link>
                 <Nav.Link as={NavLink} to="/onboarding">Mi perfil</Nav.Link>
               </Nav>
-              <Navbar.Text className="me-3">Hola, {user.name}</Navbar.Text>
-              <Button size="sm" variant="outline-light" onClick={() => { dispatch(logout()); navigate('/login'); }}>
+              <span className="text-muted small me-3">{user.name}</span>
+              <Button size="sm" variant="light" onClick={() => { dispatch(logout()); navigate('/login'); }}>
                 Salir
               </Button>
             </Navbar.Collapse>
