@@ -43,7 +43,7 @@ export default function DayTabs({ days, active, onSelect, onRename, onAdd, onDup
               {d.name}
             </button>
             {editable && i === active && (
-              <Dropdown className="gym-day-menu">
+              <Dropdown className="gym-day-menu" popperConfig={{ strategy: 'fixed' }}>
                 <Dropdown.Toggle aria-label="Opciones del día">⌄</Dropdown.Toggle>
                 <Dropdown.Menu>
                   <Dropdown.Item onClick={() => startRename(i)}>✎ Renombrar</Dropdown.Item>

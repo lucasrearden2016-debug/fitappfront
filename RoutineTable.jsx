@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Dropdown } from 'react-bootstrap';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { emptySeries, formatSeries, newExercise, parseSeries } from '../../utils/series';
 
 // Mueve el foco a la celda de abajo (o arriba) en la misma columna
@@ -11,7 +13,7 @@ function focusCell(table, row, col) {
   return !!el;
 }
 
-function SeriesCell({ value, row, col, onCommit, tableRef }) {
+function SeriesCell({ value, row, col, onCommit, tableRef, className = 'gt-input gt-series' }) {
   const formatted = formatSeries(value);
   const [text, setText] = useState(formatted);
   const focused = useRef(false);
@@ -30,7 +32,7 @@ function SeriesCell({ value, row, col, onCommit, tableRef }) {
   const target = value?.target;
   return (
     <input
-      className="gt-input gt-series"
+      className={className}
       value={text}
       placeholder={target ? `× ${target}` : ''}
       title={target ? `Objetivo: ${target} reps` : 'peso×reps (ej. 80x10) o solo reps'}
@@ -59,6 +61,7 @@ function SeriesCell({ value, row, col, onCommit, tableRef }) {
 }
 
 export default function RoutineTable({ day, onChange }) {
+  const isMobile = useMediaQuery('(max-width: 767.98px)');
   const tableRef = useRef(null);
   const dragFrom = useRef(null);
   const [dragOver, setDragOver] = useState(null);
@@ -115,6 +118,67 @@ export default function RoutineTable({ day, onChange }) {
     if (col === 'name') addRow();
     else e.currentTarget.blur();
   };
+
+  const move = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= day.exercises.length) return;
+    const list = [...day.exercises];
+    [list[i], list[j]] = [list[j], list[i]];
+    setExercises(list);
+  };
+
+  // ---------- Celular: una tarjeta por ejercicio ----------
+  if (isMobile) {
+    return (
+      <div className="gm-list" ref={tableRef}>
+        {day.exercises.map((ex, i) => (
+          <div className="gm-card" key={ex.key}>
+            <div className="gm-head">
+              <input
+                className="gm-name"
+                value={ex.name}
+                placeholder="Ejercicio"
+                data-row={i}
+                data-col="name"
+                onChange={(e) => updateExercise(i, { name: e.target.value })}
+              />
+              <Dropdown align="end">
+                <Dropdown.Toggle as="button" className="gm-menu" aria-label="Opciones">⋯</Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item disabled={i === 0} onClick={() => move(i, -1)}>↑ Subir</Dropdown.Item>
+                  <Dropdown.Item disabled={i === day.exercises.length - 1} onClick={() => move(i, 1)}>↓ Bajar</Dropdown.Item>
+                  {columns > 1 && <Dropdown.Item onClick={() => removeColumn(columns - 1)}>− Quitar serie {columns}</Dropdown.Item>}
+                  <Dropdown.Divider />
+                  <Dropdown.Item className="text-danger" onClick={() => removeRow(i)}>🗑 Eliminar ejercicio</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </div>
+            <div className="gm-series">
+              {Array.from({ length: columns }, (_, c) => (
+                <label key={c} className="gm-set">
+                  <span>S{c + 1}</span>
+                  <SeriesCell
+                    className="gm-set-input"
+                    value={ex.series?.[c]}
+                    row={i}
+                    col={c}
+                    tableRef={tableRef}
+                    onCommit={(parsed) => setSeries(i, c, parsed)}
+                  />
+                </label>
+              ))}
+              <button className="gm-add-set" onClick={addColumn} title="Agregar serie">+ serie</button>
+            </div>
+            <div className="gm-foot">
+              <input className="gm-rest" value={ex.rest} placeholder="◷ Descanso" onChange={(e) => updateExercise(i, { rest: e.target.value })} />
+              <input className="gm-notes" value={ex.notes} placeholder="Notas…" onChange={(e) => updateExercise(i, { notes: e.target.value })} />
+            </div>
+          </div>
+        ))}
+        <button className="gm-new" onClick={() => addRow()}>+ Nuevo ejercicio</button>
+      </div>
+    );
+  }
 
   return (
     <div className="gt-wrap">

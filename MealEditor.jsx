@@ -101,7 +101,7 @@ export default function MealEditor({ show, meal, defaultType, days, dayIndex, fa
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" scrollable>
+    <Modal show={show} onHide={onHide} size="lg" scrollable fullscreen="sm-down">
       <Form onSubmit={submit}>
         <Modal.Header closeButton>
           <Modal.Title as="h5">{editing ? 'Editar comida' : `Agregar comida · ${days[dayIndex]}`}</Modal.Title>

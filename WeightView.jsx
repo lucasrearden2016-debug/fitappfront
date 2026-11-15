@@ -103,7 +103,7 @@ export default function WeightView({ onTargetsChange }) {
             options={{
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
-              scales: { y: { ticks: { callback: (v) => `${Number(v).toFixed(1)} kg` }, grid: { color: '#f1f1ef' } }, x: { grid: { display: false } } },
+              scales: { y: { ticks: { callback: (v) => `${Number(v).toFixed(1)} kg` }, grid: { color: 'rgba(127,127,127,0.15)' } }, x: { grid: { display: false } } },
             }}
           />
         </div>

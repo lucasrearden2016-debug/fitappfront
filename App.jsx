@@ -13,7 +13,7 @@ export default function App() {
   return (
     <>
       <NavBar />
-      <Container className="py-4">
+      <Container className="py-4 app-main">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
