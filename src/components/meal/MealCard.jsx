@@ -1,8 +1,8 @@
-import { Spinner } from 'react-bootstrap';
+import { Dropdown, Spinner } from 'react-bootstrap';
 import { mealStyle } from './mealUtils';
 
 // Tarjeta de comida: clic abre la receta; acciones: hecha ✓, favorita ⭐, otra opción 🔄
-export default function MealCard({ meal, onOpen, onToggleEaten, isFavorite, onToggleFavorite, onSwap, swapping }) {
+export default function MealCard({ meal, onOpen, onToggleEaten, isFavorite, onToggleFavorite, onSwap, swapping, onEdit, onDelete }) {
   const style = mealStyle(meal.type);
   const preview = meal.ingredients.map((i) => (i.quantity ? `${i.name} ${i.quantity}` : i.name)).join(' · ');
   const stop = (fn) => (e) => {
@@ -27,6 +27,17 @@ export default function MealCard({ meal, onOpen, onToggleEaten, isFavorite, onTo
           <button className="meal-act" title="Otra opción con las mismas calorías" disabled={swapping} onClick={stop(onSwap)}>
             {swapping ? <Spinner size="sm" /> : '↻'}
           </button>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Dropdown align="end" className="meal-menu">
+              <Dropdown.Toggle as="button" className="meal-act" title="Más opciones">⋯</Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={onEdit}>✎ Editar</Dropdown.Item>
+                <Dropdown.Item onClick={onSwap}>↻ Otra opción con IA</Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item className="text-danger" onClick={onDelete}>🗑 Eliminar</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
           <button className={`meal-check ${meal.eaten ? 'on' : ''}`} title={meal.eaten ? 'Marcar como no hecha' : 'Marcar como hecha'} onClick={stop(onToggleEaten)}>
             ✓
           </button>

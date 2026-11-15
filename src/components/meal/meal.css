@@ -358,3 +358,29 @@ li.done { color: var(--app-faint); text-decoration: line-through; }
   .fridge-cols, .weight-top { grid-template-columns: 1fr; }
   .fridge-use { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- Armado manual ---------- */
+.meal-add {
+  border: 1.5px dashed #dcdcd9;
+  border-radius: 12px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: #fcfcfb;
+}
+.meal-add:hover { border-color: #c4c4c0; }
+.meal-menu .dropdown-toggle::after { display: none; }
+.meal-editor .segmented button { text-transform: capitalize; }
+.me-name { font-size: 1.1rem; font-weight: 600; }
+.me-ing { display: grid; grid-template-columns: 90px 100px 1fr 28px; gap: 0.4rem; margin-bottom: 0.4rem; }
+.me-remove {
+  border: 0;
+  background: none;
+  color: var(--app-faint);
+  border-radius: 4px;
+}
+.me-remove:hover { color: var(--app-red); background: #ffebe9; }
+.meal-editor .gt-new { width: auto; padding: 0 0.25rem; height: 28px; font-size: 0.8125rem; }

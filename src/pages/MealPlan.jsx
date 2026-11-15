@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Modal, Spinner } from 'react-bootstrap';
+import { Button, Dropdown, Form, Modal, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api, { showError } from '../api/client';
@@ -8,6 +8,7 @@ import ShoppingList from '../components/meal/ShoppingList';
 import MealCard from '../components/meal/MealCard';
 import FridgeView from '../components/meal/FridgeView';
 import WeightView from '../components/meal/WeightView';
+import MealEditor, { MEAL_TYPES } from '../components/meal/MealEditor';
 import { isToday, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
 import '../components/gym/gym.css';
 import '../components/meal/meal.css';
@@ -48,6 +49,8 @@ export default function MealPlan() {
   const [favorites, setFavorites] = useState([]);
   const [mealsPerDay, setMealsPerDay] = useState(4);
   const [swapping, setSwapping] = useState(null);
+  const [editor, setEditor] = useState(null); // { meal?, type? }
+  const [suggesting, setSuggesting] = useState(null);
   const closeRecipe = useCallback(() => setOpenMeal(null), []);
 
   useEffect(() => {
@@ -121,6 +124,68 @@ export default function MealPlan() {
     }
   };
 
+  // ---------- Armado manual ----------
+  const setDay = (i, meals, shoppingList) =>
+    setPlan((p) => ({ ...p, shoppingList, days: p.days.map((d, j) => (j === i ? { ...d, meals } : d)) }));
+
+  const createBlank = async () => {
+    if (plan && !confirm('Se va a reemplazar el plan de esta semana por uno vacío. ¿Seguimos?')) return;
+    try {
+      const { data } = await api.post('/mealplans/blank');
+      setPlan(data);
+      setIsCurrentWeek(true);
+      setDayIndex(todayIndex(data.days));
+      setView('week');
+      toast.success('Plan en blanco listo: agregá tus comidas día por día');
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const saveMeal = async ({ meal, repeatDays }) => {
+    try {
+      if (editor.meal) {
+        const { data } = await api.put(`/mealplans/${plan._id}/meals/${editor.meal._id}`, { meal, fit: false });
+        replaceInPlan(editor.meal._id, data.meal, data.shoppingList);
+      } else {
+        for (const i of [dayIndex, ...repeatDays]) {
+          const { data } = await api.post(`/mealplans/${plan._id}/days/${i}/meals`, { meal });
+          setDay(i, data.meals, data.shoppingList);
+        }
+      }
+      setEditor(null);
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const deleteMeal = async (meal) => {
+    if (!confirm(`¿Eliminar "${meal.name}"?`)) return;
+    try {
+      const { data } = await api.delete(`/mealplans/${plan._id}/meals/${meal._id}`);
+      setPlan((p) => ({
+        ...p,
+        shoppingList: data.shoppingList,
+        days: p.days.map((d) => ({ ...d, meals: d.meals.filter((m) => m._id !== meal._id) })),
+      }));
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const suggestMeal = async (type) => {
+    setSuggesting(type);
+    try {
+      const { data } = await api.post(`/mealplans/${plan._id}/days/${dayIndex}/suggest`, { type });
+      setDay(dayIndex, data.meals, data.shoppingList);
+      toast.success(`Sugerencia: ${data.meal.name}`);
+    } catch (err) {
+      showError(err);
+    } finally {
+      setSuggesting(null);
+    }
+  };
+
   const addChip = (text) => setFeedback((f) => (f.toLowerCase().includes(text.toLowerCase()) ? f : f ? `${f}, ${text.toLowerCase()}` : text));
 
   const generate = async () => {
@@ -179,9 +244,12 @@ export default function MealPlan() {
             Un plan de 7 días con comidas que te gustan, ajustado a tus calorías, con recetas y lista de compras.
             ¿No cargaste tus comidas? Hacelo en <Link to="/onboarding">Mi perfil</Link>.
           </p>
-          <Button onClick={() => setShowGenerate(true)} disabled={generating}>
-            {generating ? <><Spinner size="sm" /> Generando tu semana…</> : '✨ Generar mi primer plan'}
-          </Button>
+          <div className="d-flex gap-2 justify-content-center flex-wrap">
+            <Button onClick={() => setShowGenerate(true)} disabled={generating}>
+              {generating ? <><Spinner size="sm" /> Generando tu semana…</> : '✨ Generar con IA'}
+            </Button>
+            <Button variant="light" onClick={createBlank} disabled={generating}>✎ Armarlo yo</Button>
+          </div>
           {generating && <p className="text-muted small mt-3 mb-0">Esto tarda entre 15 y 40 segundos.</p>}
         </div>
         {generateModal}
@@ -195,7 +263,9 @@ export default function MealPlan() {
   const eatenCount = allMeals.filter((m) => m.eaten).length;
   const dayEaten = day.meals.filter((m) => m.eaten).length;
   const todayMeals = plan.days[todayIndex(plan.days)]?.meals ?? [];
-  const types = plan.days[0]?.meals.map((m) => m.type) ?? [];
+  const types = [...new Set(plan.days.flatMap((d) => d.meals.map((m) => m.type)))];
+  const expected = { 2: ['almuerzo', 'cena'], 3: ['desayuno', 'almuerzo', 'cena'], 4: ['desayuno', 'almuerzo', 'merienda', 'cena'], 5: ['desayuno', 'colación', 'almuerzo', 'merienda', 'cena'], 6: MEAL_TYPES }[mealsPerDay] ?? ['desayuno', 'almuerzo', 'merienda', 'cena'];
+  const missingTypes = expected.filter((t) => !day.meals.some((m) => m.type?.toLowerCase() === t));
 
   return (
     <div className="meal-page">
@@ -212,9 +282,15 @@ export default function MealPlan() {
             {plan.feedback && <span className="gym-badge" title={plan.feedback}>✎ con tus pedidos</span>}
           </div>
         </div>
-        <Button className="mt-3" onClick={() => setShowGenerate(true)} disabled={generating}>
-          {generating ? <><Spinner size="sm" /> Generando…</> : '✨ Nuevo plan'}
-        </Button>
+        <Dropdown className="mt-3" align="end">
+          <Dropdown.Toggle disabled={generating}>
+            {generating ? <><Spinner size="sm" /> Generando…</> : 'Nuevo plan'}
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item onClick={() => setShowGenerate(true)}>✨ Generar con IA</Dropdown.Item>
+            <Dropdown.Item onClick={createBlank}>✎ Empezar en blanco</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
 
       {!isCurrentWeek && !generating && (
@@ -272,8 +348,28 @@ export default function MealPlan() {
                 onToggleFavorite={() => toggleFavorite(m)}
                 onSwap={() => swapMeal(m)}
                 swapping={swapping === m._id}
+                onEdit={() => setEditor({ meal: m })}
+                onDelete={() => deleteMeal(m)}
               />
             ))}
+            <div className="meal-add">
+              {!day.meals.length && <p className="text-muted small mb-2">Este día todavía no tiene comidas.</p>}
+              <div className="d-flex gap-2 flex-wrap justify-content-center">
+                <Button variant="light" size="sm" onClick={() => setEditor({ type: missingTypes[0] ?? 'almuerzo' })}>+ Agregar comida</Button>
+                <Dropdown>
+                  <Dropdown.Toggle variant="light" size="sm" disabled={!!suggesting}>
+                    {suggesting ? <><Spinner size="sm" /> Pensando {suggesting}…</> : '✨ Sugerir con IA'}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    {[...missingTypes, ...MEAL_TYPES.filter((t) => !missingTypes.includes(t))].map((t) => (
+                      <Dropdown.Item key={t} onClick={() => suggestMeal(t)} className="text-capitalize">
+                        {t}{missingTypes.includes(t) ? ' · falta' : ''}
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -282,7 +378,7 @@ export default function MealPlan() {
 
       {view === 'fridge' && (
         <FridgeView
-          types={types.length ? types : ['desayuno', 'almuerzo', 'merienda', 'cena'].slice(0, mealsPerDay)}
+          types={types.length ? types : expected}
           todayMeals={todayMeals}
           onUseInPlan={useInPlan}
           isFavorite={(name) => !!favByName(name)}
@@ -293,6 +389,16 @@ export default function MealPlan() {
       {view === 'weight' && <WeightView onTargetsChange={() => {}} />}
 
       <RecipeDrawer planId={plan._id} meal={openMeal} onClose={closeRecipe} />
+      <MealEditor
+        show={!!editor}
+        meal={editor?.meal}
+        defaultType={editor?.type}
+        days={plan.days.map((d) => d.day)}
+        dayIndex={dayIndex}
+        favorites={favorites}
+        onHide={() => setEditor(null)}
+        onSave={saveMeal}
+      />
       {generateModal}
     </div>
   );
