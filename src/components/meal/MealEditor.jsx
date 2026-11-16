@@ -30,7 +30,8 @@ const fromMeal = (m) => ({
  * Modal para cargar o editar una comida a mano.
  * La IA es opcional: solo si tocás "Calcular macros".
  */
-export default function MealEditor({ show, meal, defaultType, days, dayIndex, favorites, onHide, onSave }) {
+export default function MealEditor({ show, meal, defaultType, days = [], dayIndex = 0, favorites = [], onHide, onSave, mode = 'plan' }) {
+  const isFav = mode === 'favorite';
   const [form, setForm] = useState(blank(defaultType));
   const [repeat, setRepeat] = useState([]);
   const [estimating, setEstimating] = useState(false);
@@ -104,10 +105,12 @@ export default function MealEditor({ show, meal, defaultType, days, dayIndex, fa
     <Modal show={show} onHide={onHide} size="lg" scrollable fullscreen="sm-down" className="meal-editor-modal">
       <Form onSubmit={submit}>
         <Modal.Header closeButton>
-          <Modal.Title as="h5">{editing ? 'Editar comida' : `Agregar comida · ${days[dayIndex]}`}</Modal.Title>
+          <Modal.Title as="h5">
+            {isFav ? (editing ? 'Editar favorita' : 'Nueva favorita') : editing ? 'Editar comida' : `Agregar comida · ${days[dayIndex] ?? ''}`}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body className="meal-editor">
-          {!editing && favorites.length > 0 && (
+          {!editing && !isFav && favorites.length > 0 && (
             <Form.Select className="mb-3" defaultValue="" onChange={(e) => fromFavorite(e.target.value)}>
               <option value="" disabled>⭐ Cargar desde mis favoritas…</option>
               {favorites.map((f) => <option key={f._id} value={f._id}>{f.name}</option>)}
@@ -173,7 +176,7 @@ export default function MealEditor({ show, meal, defaultType, days, dayIndex, fa
           <h6 className="recipe-h">Preparación (opcional)</h6>
           <Form.Control as="textarea" rows={3} size="sm" placeholder={'Un paso por línea.\nSi lo dejás vacío, la IA escribe la receta cuando la abras.'} value={form.steps} onChange={(e) => set({ steps: e.target.value })} />
 
-          {!editing && (
+          {!editing && !isFav && (
             <>
               <h6 className="recipe-h">Repetir también en</h6>
               <div className="segmented">
@@ -194,7 +197,7 @@ export default function MealEditor({ show, meal, defaultType, days, dayIndex, fa
         <Modal.Footer>
           <Button variant="light" onClick={onHide}>Cancelar</Button>
           <Button type="submit" disabled={!form.name.trim() || saving}>
-            {saving ? <Spinner size="sm" /> : editing ? 'Guardar cambios' : repeat.length ? `Agregar a ${repeat.length + 1} días` : 'Agregar'}
+            {saving ? <Spinner size="sm" /> : editing ? 'Guardar cambios' : isFav ? 'Guardar favorita' : repeat.length ? `Agregar a ${repeat.length + 1} días` : 'Agregar'}
           </Button>
         </Modal.Footer>
       </Form>

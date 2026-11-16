@@ -429,3 +429,54 @@ li.done { color: var(--app-faint); text-decoration: line-through; }
 }
 .meal-editor-modal .modal-body { overflow-y: auto; }
 .meal-editor-modal .modal-footer { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+
+/* ---------- Favoritas ---------- */
+.favs-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+.favs .segmented button { text-transform: capitalize; }
+.favs .segmented .text-muted { font-size: 0.75rem; margin-left: 0.15rem; }
+.fav-card { cursor: default; }
+.fav-card:hover { transform: none; }
+.fav-add {
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-surface);
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+}
+.fav-add::after { display: none; }
+.fav-add:hover { background: var(--app-hover); }
+
+.picker-left {
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.9rem;
+  background: var(--app-surface-2);
+}
+.picker-left-values { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.picker-left-values .over { color: var(--app-red); }
+.fav-picker .segmented button { text-transform: capitalize; }
+.picker-list { list-style: none; padding: 0; margin: 0; }
+.picker-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.15rem;
+  border-bottom: 1px solid var(--app-border);
+}
+.picker-icon { width: 34px; height: 34px; flex: none; border-radius: 8px; display: grid; place-items: center; }
+.picker-info { flex: 1; min-width: 0; }
+.picker-name { font-weight: 500; font-size: 0.9rem; overflow-wrap: anywhere; }
+.picker-macros { font-size: 0.75rem; color: var(--app-muted); font-variant-numeric: tabular-nums; }
+.picker-warn { color: var(--app-red); }
+.picker-list li.too-much .picker-name { color: var(--app-muted); }
+.picker-list .btn { width: 36px; height: 36px; padding: 0; font-size: 1.1rem; flex: none; }
+[data-bs-theme='dark'] .picker-icon { background: var(--app-subtle) !important; }
+
+@media (max-width: 767.98px) {
+  .favs-head { flex-direction: column; align-items: stretch; }
+  .favs .segmented, .fav-picker .segmented { display: flex; overflow-x: auto; flex-wrap: nowrap; max-width: 100%; }
+  .favs .segmented button, .fav-picker .segmented button { white-space: nowrap; flex: none; }
+}

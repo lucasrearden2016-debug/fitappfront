@@ -9,6 +9,8 @@ import MealCard from '../components/meal/MealCard';
 import FridgeView from '../components/meal/FridgeView';
 import WeightView from '../components/meal/WeightView';
 import MealEditor, { MEAL_TYPES } from '../components/meal/MealEditor';
+import FavoritesView from '../components/meal/FavoritesView';
+import FavoritePicker from '../components/meal/FavoritePicker';
 import { isToday, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
 import '../components/gym/gym.css';
 import '../components/meal/meal.css';
@@ -51,6 +53,8 @@ export default function MealPlan() {
   const [swapping, setSwapping] = useState(null);
   const [editor, setEditor] = useState(null); // { meal?, type? }
   const [suggesting, setSuggesting] = useState(null);
+  const [favEditor, setFavEditor] = useState(null); // { fav? }
+  const [picker, setPicker] = useState(false);
   const closeRecipe = useCallback(() => setOpenMeal(null), []);
 
   useEffect(() => {
@@ -112,7 +116,7 @@ export default function MealPlan() {
         const { data } = await api.delete(`/profile/favorites/${fav._id}`);
         setFavorites(data);
       } else {
-        const { _id: _id1, eaten: _e, recipe: _r, ...rest } = meal;
+        const { _id: _id1, eaten: _e, ...rest } = meal;
         const { data } = await api.post('/profile/favorites', {
           meal: { ...rest, ingredients: rest.ingredients.map(({ name, amount, unit, quantity, section }) => ({ name, amount, unit, quantity, section })) },
         });
@@ -183,6 +187,52 @@ export default function MealPlan() {
       showError(err);
     } finally {
       setSuggesting(null);
+    }
+  };
+
+  // ---------- Favoritas ----------
+  const favToMeal = (f) => ({
+    type: f.type,
+    name: f.name,
+    description: f.description ?? '',
+    ingredients: (f.ingredients ?? []).map(({ name, amount, unit, quantity, section }) => ({ name, amount, unit, quantity, section })),
+    calories: f.calories,
+    protein: f.protein,
+    carbs: f.carbs,
+    fat: f.fat,
+    ...(f.recipe?.steps?.length && { recipe: { steps: f.recipe.steps, timeMinutes: f.recipe.timeMinutes ?? 0, tips: f.recipe.tips ?? '' } }),
+  });
+
+  const saveFavorite = async ({ meal }) => {
+    try {
+      const { data } = favEditor?.fav
+        ? await api.put(`/profile/favorites/${favEditor.fav._id}`, { meal })
+        : await api.post('/profile/favorites', { meal });
+      setFavorites(data);
+      setFavEditor(null);
+      toast.success('⭐ Favorita guardada');
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const deleteFavorite = async (f) => {
+    if (!confirm(`¿Eliminar "${f.name}" de tus favoritas?`)) return;
+    try {
+      const { data } = await api.delete(`/profile/favorites/${f._id}`);
+      setFavorites(data);
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const addFavToDay = async (f, i) => {
+    try {
+      const { data } = await api.post(`/mealplans/${plan._id}/days/${i}/meals`, { meal: favToMeal(f) });
+      setDay(i, data.meals, data.shoppingList);
+      toast.success(`${f.name} → ${plan.days[i].day}`);
+    } catch (err) {
+      showError(err);
     }
   };
 
@@ -305,6 +355,9 @@ export default function MealPlan() {
       {/* Vistas */}
       <div className="gym-views">
         <button className={`gym-view ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>▦ Semana</button>
+        <button className={`gym-view ${view === 'favs' ? 'active' : ''}`} onClick={() => setView('favs')}>
+          ⭐ Favoritas <span className="gym-badge">{favorites.length}</span>
+        </button>
         <button className={`gym-view ${view === 'shopping' ? 'active' : ''}`} onClick={() => setView('shopping')}>
           🛒 Compras <span className="gym-badge">{plan.shoppingList.length}</span>
         </button>
@@ -356,6 +409,7 @@ export default function MealPlan() {
               {!day.meals.length && <p className="text-muted small mb-2">Este día todavía no tiene comidas.</p>}
               <div className="d-flex gap-2 flex-wrap justify-content-center">
                 <Button variant="light" size="sm" onClick={() => setEditor({ type: missingTypes[0] ?? 'almuerzo' })}>+ Agregar comida</Button>
+                <Button variant="light" size="sm" onClick={() => setPicker(true)}>⭐ De favoritas</Button>
                 <Dropdown>
                   <Dropdown.Toggle variant="light" size="sm" disabled={!!suggesting}>
                     {suggesting ? <><Spinner size="sm" /> Pensando {suggesting}…</> : '✨ Sugerir con IA'}
@@ -372,6 +426,17 @@ export default function MealPlan() {
             </div>
           </div>
         </>
+      )}
+
+      {view === 'favs' && (
+        <FavoritesView
+          favorites={favorites}
+          days={plan.days.map((d) => d.day)}
+          onNew={() => setFavEditor({})}
+          onEdit={(fav) => setFavEditor({ fav })}
+          onDelete={deleteFavorite}
+          onAddToDay={addFavToDay}
+        />
       )}
 
       {view === 'shopping' && <ShoppingList planId={plan._id} items={plan.shoppingList} />}
@@ -398,6 +463,27 @@ export default function MealPlan() {
         favorites={favorites}
         onHide={() => setEditor(null)}
         onSave={saveMeal}
+      />
+      <MealEditor
+        mode="favorite"
+        show={!!favEditor}
+        meal={favEditor?.fav}
+        defaultType={missingTypes[0] ?? 'desayuno'}
+        onHide={() => setFavEditor(null)}
+        onSave={saveFavorite}
+      />
+      <FavoritePicker
+        show={picker}
+        onHide={() => setPicker(false)}
+        day={day}
+        targets={plan.targets}
+        favorites={favorites}
+        defaultType={missingTypes[0]}
+        onPick={(f) => addFavToDay(f, dayIndex)}
+        onCreate={() => {
+          setPicker(false);
+          setFavEditor({});
+        }}
       />
       {generateModal}
     </div>
