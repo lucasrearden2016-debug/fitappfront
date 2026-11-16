@@ -406,3 +406,14 @@ li.done { color: var(--app-faint); text-decoration: line-through; }
   .fridge .segmented button { white-space: nowrap; }
   .me-ing { grid-template-columns: 70px 92px 1fr 28px; }
 }
+
+/* Que ningún texto largo estire la grilla más allá de la pantalla */
+.meal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.meal-days { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.macro-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.meal-card, .meal-page { min-width: 0; }
+.meal-name, .meal-desc { overflow-wrap: anywhere; }
+@media (max-width: 767.98px) {
+  .meal-grid { grid-template-columns: minmax(0, 1fr); }
+  .macro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

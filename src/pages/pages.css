@@ -271,3 +271,9 @@
   .home-card { padding: 1.15rem; }
   .home-preview-row > span { padding: 0.35rem 0.4rem; }
 }
+
+/* Que los botones segmentados largos no estiren la página */
+.profile-section > div { min-width: 0; }
+@media (max-width: 767.98px) {
+  .profile-section { grid-template-columns: minmax(0, 1fr); }
+}
