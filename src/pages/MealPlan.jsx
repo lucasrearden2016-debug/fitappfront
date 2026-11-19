@@ -11,6 +11,7 @@ import WeightView from '../components/meal/WeightView';
 import MealEditor, { MEAL_TYPES } from '../components/meal/MealEditor';
 import FavoritesView from '../components/meal/FavoritesView';
 import FavoritePicker from '../components/meal/FavoritePicker';
+import FoodsView from '../components/meal/FoodsView';
 import { isToday, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
 import '../components/gym/gym.css';
 import '../components/meal/meal.css';
@@ -358,6 +359,7 @@ export default function MealPlan() {
         <button className={`gym-view ${view === 'favs' ? 'active' : ''}`} onClick={() => setView('favs')}>
           ⭐ Favoritas <span className="gym-badge">{favorites.length}</span>
         </button>
+        <button className={`gym-view ${view === 'foods' ? 'active' : ''}`} onClick={() => setView('foods')}>🥫 Alimentos</button>
         <button className={`gym-view ${view === 'shopping' ? 'active' : ''}`} onClick={() => setView('shopping')}>
           🛒 Compras <span className="gym-badge">{plan.shoppingList.length}</span>
         </button>
@@ -438,6 +440,8 @@ export default function MealPlan() {
           onAddToDay={addFavToDay}
         />
       )}
+
+      {view === 'foods' && <FoodsView />}
 
       {view === 'shopping' && <ShoppingList planId={plan._id} items={plan.shoppingList} />}
 
