@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { logout } from '../store/authSlice';
 import { useTheme } from '../hooks/useTheme';
 import { LANGS, setLanguage } from '../i18n';
+import { Diamond } from './premium/premiumUtils';
+import './premium/premium.css';
 
 // Íconos de línea para la barra de abajo (toman el color del texto)
 const Ico = ({ children }) => (
@@ -71,6 +73,20 @@ export function LanguagePicker() {
   );
 }
 
+// Chip del plan: prueba (días que quedan) / Premium / botón para pasarse
+function PlanChip() {
+  const { t } = useTranslation();
+  const plan = useSelector((s) => s.plan.data);
+  if (!plan) return null;
+  if (plan.source === 'subscription') {
+    return <NavLink to="/premium" className="plan-chip"><Diamond size={12} /> Premium</NavLink>;
+  }
+  if (plan.source === 'trial') {
+    return <NavLink to="/premium" className="plan-chip" title={t('Prueba gratis de Premium')}><Diamond size={12} /> {t('Prueba · {{n}} d', { n: plan.trialDaysLeft })}</NavLink>;
+  }
+  return <NavLink to="/premium" className="plan-chip free"><Diamond size={12} /> {t('Premium')}</NavLink>;
+}
+
 export default function NavBar() {
   const { t } = useTranslation();
   const { user } = useSelector((s) => s.auth);
@@ -97,6 +113,7 @@ export default function NavBar() {
             </Nav>
           )}
           <div className="d-flex align-items-center gap-1 ms-auto">
+            {user && <PlanChip />}
             <LanguagePicker />
             <button className="theme-toggle" onClick={toggle} title={theme === 'dark' ? t('Modo claro') : t('Modo oscuro')} aria-label={t('Cambiar tema')}>
               {theme === 'dark' ? '☀︎' : '☾'}

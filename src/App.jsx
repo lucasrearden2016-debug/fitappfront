@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import NavBar from './components/NavBar';
@@ -10,22 +12,33 @@ import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
 import MealPlan from './pages/MealPlan';
 import Gym from './pages/Gym';
+import Premium from './pages/Premium';
+import PremiumModal from './components/premium/PremiumModal';
+import { fetchPlan } from './store/planSlice';
 
 export default function App() {
+  const token = useSelector((s) => s.auth.token);
+  const dispatch = useDispatch();
+  useEffect(() => {
+    if (token) dispatch(fetchPlan());
+  }, [token, dispatch]);
+
   return (
     <>
       <NavBar />
+      <PremiumModal />
       <Container className="py-4 app-main">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/plan" element={<MealPlan />} />
             <Route path="/gym" element={<Gym />} />
+            <Route path="/premium" element={<Premium />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

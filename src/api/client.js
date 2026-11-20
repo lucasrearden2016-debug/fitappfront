@@ -14,6 +14,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Función de IA sin Premium: se abre el cartel "Pasate a Premium" (lo escucha PremiumModal)
+    if (err.response?.data?.code === 'PREMIUM_REQUIRED') {
+      window.dispatchEvent(new Event('premium-required'));
+    }
     if (err.response?.status === 401 && localStorage.getItem('token')) {
       localStorage.removeItem('token');
       window.location.href = '/login';
@@ -23,6 +27,9 @@ api.interceptors.response.use(
 );
 
 export const errorMsg = (err) => err.response?.data?.message ?? i18n.t('Algo salió mal');
-export const showError = (err) => toast.error(errorMsg(err));
+export const showError = (err) => {
+  if (err.response?.data?.code === 'PREMIUM_REQUIRED') return; // ya lo muestra el cartel Premium
+  toast.error(errorMsg(err));
+};
 
 export default api;
