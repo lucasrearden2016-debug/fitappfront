@@ -114,8 +114,8 @@ export default function WeightView({ onTargetsChange }) {
               labels: logs.map((l) => fmtDate(l.date)),
               datasets: [{
                 data: logs.map((l) => l.weightKg),
-                borderColor: '#2383e2',
-                backgroundColor: 'rgba(35,131,226,0.08)',
+                borderColor: '#3b8fe6',
+                backgroundColor: 'rgba(59,143,230,0.12)',
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,

@@ -13,7 +13,7 @@
 }
 .tag-box:focus-within {
   border-color: var(--app-blue);
-  box-shadow: 0 0 0 3px rgba(35, 131, 226, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--app-ring), 0.18);
 }
 .tag-box input {
   flex: 1;
@@ -147,6 +147,17 @@
 /* ---------- Inicio ---------- */
 .home { max-width: 1040px; margin: 0 auto; }
 .home-hero { text-align: center; padding: 3.5rem 0 3rem; }
+.home-logo {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1.25rem;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  color: #d4af37;
+  background: radial-gradient(circle at 50% 30%, #1b3358, #0a1220 75%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px rgba(10, 18, 32, 0.25);
+}
 .home-eyebrow {
   display: inline-block;
   font-size: 0.75rem;
@@ -186,6 +197,7 @@
   place-items: center;
   font-size: 1.25rem;
   margin-bottom: 1rem;
+  background: var(--app-subtle);
 }
 .home-card h3 { font-size: 1.25rem; margin-bottom: 0.4rem; }
 .home-card > p { color: var(--app-muted); font-size: 0.9rem; }
@@ -285,7 +297,7 @@
   padding: 0.6rem 1rem;
   margin-bottom: 1rem;
 }
-.account-box.needs { border-color: rgba(35, 131, 226, 0.45); background: rgba(35, 131, 226, 0.04); }
+.account-box.needs { border-color: rgba(var(--app-ring), 0.45); background: rgba(var(--app-ring), 0.04); }
 .account-row { display: flex; align-items: baseline; gap: 1rem; padding: 0.4rem 0; font-size: 0.875rem; }
 .account-row + .account-row { border-top: 1px solid var(--app-border); }
 .account-row .label { width: 64px; flex: none; color: var(--app-muted); font-size: 0.8125rem; }

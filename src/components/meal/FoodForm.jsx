@@ -142,7 +142,7 @@ export default function FoodForm({ food, initialName = '', onSaved, onCancel }) 
           {saving ? <Spinner size="sm" /> : food ? t('Guardar cambios') : t('Crear alimento')}
         </Button>
       </div>
-      {!food && <p className="field-help mt-2 mb-0">{t('Los alimentos son públicos: los ve y usa toda la comunidad de fitapp.')}</p>}
+      {!food && <p className="field-help mt-2 mb-0">{t('Los alimentos son públicos: los ve y usa toda la comunidad de FittingUp.')}</p>}
     </Form>
   );
 }

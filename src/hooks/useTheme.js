@@ -7,7 +7,7 @@ export function useTheme() {
   const toggle = useCallback(() => {
     const next = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-bs-theme', next);
-    document.querySelector('meta[name=theme-color]')?.setAttribute('content', next === 'dark' ? '#191919' : '#ffffff');
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content', next === 'dark' ? '#0a1220' : '#f6f8fc');
     try {
       localStorage.setItem('theme', next);
     } catch {

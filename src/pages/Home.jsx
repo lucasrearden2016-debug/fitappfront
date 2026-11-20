@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Button } from 'react-bootstrap';
 import { Trans, useTranslation } from 'react-i18next';
 import { mealTypeLabel } from '../i18n/labels';
+import { LogoMark } from '../components/NavBar';
 import './pages.css';
 
 // Texto con <b>, <i> o <code> adentro, traducible
@@ -15,6 +16,7 @@ export default function Home() {
   return (
     <div className="home">
       <section className="home-hero">
+        <div className="home-logo"><LogoMark size={64} /></div>
         <span className="home-eyebrow">{t('Dieta + gimnasio · todo en uno')}</span>
         <h1>{t('Tu alimentación y tu entrenamiento, en un solo lugar.')}</h1>
         <p>{t('Armá tu plan de comidas con tus alimentos y favoritas, o dejá que la IA lo haga. Anotá tu rutina mientras entrenás y mirá cómo progresás.')}</p>
@@ -37,7 +39,7 @@ export default function Home() {
 
       <div className="home-cards">
         <article className="home-card">
-          <div className="home-card-icon" style={{ background: '#dafbe1' }}>🥗</div>
+          <div className="home-card-icon">🥗</div>
           <h3>{t('Plan alimenticio')}</h3>
           <p>{t('Tu semana de comidas ajustada a tus calorías: armala a mano o generala con IA.')}</p>
           <ol className="home-steps">
@@ -55,7 +57,7 @@ export default function Home() {
         </article>
 
         <article className="home-card">
-          <div className="home-card-icon" style={{ background: '#ddf4ff' }}>🏋️</div>
+          <div className="home-card-icon">🏋️</div>
           <h3>{t('Gimnasio')}</h3>
           <p>{t('Tu rutina como una tabla: la editás mientras entrenás y la app guarda tu historial sola.')}</p>
           <ol className="home-steps">
