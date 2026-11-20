@@ -31,7 +31,7 @@ export default function Login() {
     <Card className="mx-auto" style={{ maxWidth: 420 }}>
       <Card.Body>
         <h3 className="mb-3">{t('Ingresar')}</h3>
-        <Formik initialValues={{ identifier: '', password: '' }} validationSchema={schema} onSubmit={onSubmit}>
+        <Formik initialValues={{ identifier: '', password: '' }} validationSchema={schema} onSubmit={onSubmit} validateOnBlur={false}>
           {({ getFieldProps, errors, touched, isSubmitting }) => (
             <FForm noValidate>
               <Form.Group className="mb-3">
@@ -50,6 +50,9 @@ export default function Login() {
                 <Form.Label>{t('Contraseña')}</Form.Label>
                 <Form.Control type="password" autoComplete="current-password" {...getFieldProps('password')} isInvalid={touched.password && errors.password} />
                 <Form.Control.Feedback type="invalid">{t(errors.password ?? '')}</Form.Control.Feedback>
+                <div className="text-end mt-1">
+                  <Link to="/forgot-password" className="small">{t('¿Olvidaste tu contraseña?')}</Link>
+                </div>
               </Form.Group>
               <Button type="submit" className="w-100" disabled={isSubmitting}>{t('Entrar')}</Button>
             </FForm>
