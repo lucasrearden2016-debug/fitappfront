@@ -1,10 +1,12 @@
+import { toNum } from './num';
+
 // Cálculo de macros a partir de la base de alimentos (valores por 100 g / 100 ml)
 
 export const isLinked = (ing) => !!(ing?.foodId && ing?.per100);
 
 // Gramos (o ml) reales del ingrediente según la unidad elegida
 export function gramsOf(ing) {
-  const amount = Number(String(ing.amount ?? '').replace(',', '.')) || 0;
+  const amount = toNum(ing.amount) || 0;
   if (!isLinked(ing)) return 0;
   if (ing.unit === ing.unitName && ing.unitGrams) return amount * ing.unitGrams;
   return amount; // g o ml
@@ -52,11 +54,11 @@ export const unlink = (ing) => {
 
 // Misma regla que el back: que kcal y macros cierren
 export function checkFood({ calories, protein, carbs, fat, fiber, baseUnit }) {
-  const [k, p, c, f] = [calories, protein, carbs, fat].map((v) => Number(v) || 0);
+  const [k, p, c, f] = [calories, protein, carbs, fat].map((v) => toNum(v) || 0);
   if (!k && !p && !c && !f) return null;
-  if (baseUnit === 'g' && p + c + f + (Number(fiber) || 0) > 101) return 'Proteína + carbos + grasas no pueden pasar de 100 g.';
+  if (baseUnit === 'g' && p + c + f + (toNum(fiber) || 0) > 101) return { key: 'Proteína + carbos + grasas no pueden pasar de 100 g.' };
   const atwater = p * 4 + c * 4 + f * 9;
-  if (Math.abs(atwater - k) > Math.max(25, k * 0.2)) return `Con esos macros serían ~${Math.round(atwater)} kcal. ¿Está todo por 100 ${baseUnit}?`;
+  if (Math.abs(atwater - k) > Math.max(25, k * 0.2)) return { key: 'Con esos macros serían ~{{kcal}} kcal. ¿Está todo por 100 {{unit}}?', vars: { kcal: Math.round(atwater), unit: baseUnit } };
   return null;
 }
 

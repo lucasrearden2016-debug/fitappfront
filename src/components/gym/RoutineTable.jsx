@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { emptySeries, formatSeries, newExercise, parseSeries } from '../../utils/series';
+import { useTranslation } from 'react-i18next';
 
 // Mueve el foco a la celda de abajo (o arriba) en la misma columna
 function focusCell(table, row, col) {
@@ -14,6 +15,7 @@ function focusCell(table, row, col) {
 }
 
 function SeriesCell({ value, row, col, onCommit, tableRef, className = 'gt-input gt-series' }) {
+  const { t } = useTranslation();
   const formatted = formatSeries(value);
   const [text, setText] = useState(formatted);
   const focused = useRef(false);
@@ -35,7 +37,7 @@ function SeriesCell({ value, row, col, onCommit, tableRef, className = 'gt-input
       className={className}
       value={text}
       placeholder={target ? `× ${target}` : ''}
-      title={target ? `Objetivo: ${target} reps` : 'peso×reps (ej. 80x10) o solo reps'}
+      title={target ? t('Objetivo: {{n}} reps', { n: target }) : t('peso×reps (ej. 80x10) o solo reps')}
       inputMode="decimal"
       data-row={row}
       data-col={col}
@@ -61,6 +63,7 @@ function SeriesCell({ value, row, col, onCommit, tableRef, className = 'gt-input
 }
 
 export default function RoutineTable({ day, onChange }) {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 767.98px)');
   const tableRef = useRef(null);
   const dragFrom = useRef(null);
@@ -92,7 +95,7 @@ export default function RoutineTable({ day, onChange }) {
   const addColumn = () => onChange({ ...day, columns: columns + 1 });
   const removeColumn = (col) => {
     const hasData = day.exercises.some((e) => e.series?.[col]?.reps || e.series?.[col]?.weightKg);
-    if (hasData && !confirm(`La serie ${col + 1} tiene datos. ¿Eliminarla igual?`)) return;
+    if (hasData && !confirm(t('La serie {{n}} tiene datos. ¿Eliminarla igual?', { n: col + 1 }))) return;
     onChange({
       ...day,
       columns: Math.max(1, columns - 1),
@@ -137,26 +140,26 @@ export default function RoutineTable({ day, onChange }) {
               <input
                 className="gm-name"
                 value={ex.name}
-                placeholder="Ejercicio"
+                placeholder={t('Ejercicio')}
                 data-row={i}
                 data-col="name"
                 onChange={(e) => updateExercise(i, { name: e.target.value })}
               />
               <Dropdown align="end">
-                <Dropdown.Toggle as="button" className="gm-menu" aria-label="Opciones">⋯</Dropdown.Toggle>
+                <Dropdown.Toggle as="button" className="gm-menu" aria-label={t('Opciones')}>⋯</Dropdown.Toggle>
                 <Dropdown.Menu>
-                  <Dropdown.Item disabled={i === 0} onClick={() => move(i, -1)}>↑ Subir</Dropdown.Item>
-                  <Dropdown.Item disabled={i === day.exercises.length - 1} onClick={() => move(i, 1)}>↓ Bajar</Dropdown.Item>
-                  {columns > 1 && <Dropdown.Item onClick={() => removeColumn(columns - 1)}>− Quitar serie {columns}</Dropdown.Item>}
+                  <Dropdown.Item disabled={i === 0} onClick={() => move(i, -1)}>{t('↑ Subir')}</Dropdown.Item>
+                  <Dropdown.Item disabled={i === day.exercises.length - 1} onClick={() => move(i, 1)}>{t('↓ Bajar')}</Dropdown.Item>
+                  {columns > 1 && <Dropdown.Item onClick={() => removeColumn(columns - 1)}>{t('− Quitar serie {{n}}', { n: columns })}</Dropdown.Item>}
                   <Dropdown.Divider />
-                  <Dropdown.Item className="text-danger" onClick={() => removeRow(i)}>🗑 Eliminar ejercicio</Dropdown.Item>
+                  <Dropdown.Item className="text-danger" onClick={() => removeRow(i)}>{t('🗑 Eliminar ejercicio')}</Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             </div>
             <div className="gm-series">
               {Array.from({ length: columns }, (_, c) => (
                 <label key={c} className="gm-set">
-                  <span>S{c + 1}</span>
+                  <span>{t('S{{n}}', { n: c + 1 })}</span>
                   <SeriesCell
                     className="gm-set-input"
                     value={ex.series?.[c]}
@@ -167,15 +170,15 @@ export default function RoutineTable({ day, onChange }) {
                   />
                 </label>
               ))}
-              <button className="gm-add-set" onClick={addColumn} title="Agregar serie">+ serie</button>
+              <button className="gm-add-set" onClick={addColumn} title={t('Agregar serie')}>{t('+ serie')}</button>
             </div>
             <div className="gm-foot">
-              <input className="gm-rest" value={ex.rest} placeholder="◷ Descanso" onChange={(e) => updateExercise(i, { rest: e.target.value })} />
-              <input className="gm-notes" value={ex.notes} placeholder="Notas…" onChange={(e) => updateExercise(i, { notes: e.target.value })} />
+              <input className="gm-rest" value={ex.rest} placeholder={`◷ ${t('Descanso')}`} onChange={(e) => updateExercise(i, { rest: e.target.value })} />
+              <input className="gm-notes" value={ex.notes} placeholder={t('Notas…')} onChange={(e) => updateExercise(i, { notes: e.target.value })} />
             </div>
           </div>
         ))}
-        <button className="gm-new" onClick={() => addRow()}>+ Nuevo ejercicio</button>
+        <button className="gm-new" onClick={() => addRow()}>{t('+ Nuevo ejercicio')}</button>
       </div>
     );
   }
@@ -195,20 +198,20 @@ export default function RoutineTable({ day, onChange }) {
         <thead>
           <tr>
             <th />
-            <th><span className="gt-th-icon">Aa</span> Ejercicio</th>
+            <th><span className="gt-th-icon">Aa</span> {t('Ejercicio')}</th>
             {Array.from({ length: columns }, (_, c) => (
               <th key={c} className="gt-th-series">
-                <span className="gt-th-icon">#</span> Serie {c + 1}
+                <span className="gt-th-icon">#</span> {t('Serie {{n}}', { n: c + 1 })}
                 {columns > 1 && (
-                  <button className="gt-th-remove" title="Eliminar columna" onClick={() => removeColumn(c)}>×</button>
+                  <button className="gt-th-remove" title={t('Eliminar columna')} onClick={() => removeColumn(c)}>×</button>
                 )}
               </th>
             ))}
             <th className="gt-th-add">
-              <button className="gt-add-col" title="Agregar serie" onClick={addColumn}>+</button>
+              <button className="gt-add-col" title={t('Agregar serie')} onClick={addColumn}>+</button>
             </th>
-            <th><span className="gt-th-icon">◷</span> Descanso</th>
-            <th><span className="gt-th-icon">≡</span> Notas</th>
+            <th><span className="gt-th-icon">◷</span> {t('Descanso')}</th>
+            <th><span className="gt-th-icon">≡</span> {t('Notas')}</th>
             <th />
           </tr>
         </thead>
@@ -229,7 +232,7 @@ export default function RoutineTable({ day, onChange }) {
                 <span
                   className="gt-handle"
                   draggable
-                  title="Arrastrar para reordenar"
+                  title={t('Arrastrar para reordenar')}
                   onDragStart={(e) => {
                     dragFrom.current = i;
                     e.dataTransfer.effectAllowed = 'move';
@@ -244,7 +247,7 @@ export default function RoutineTable({ day, onChange }) {
                 <input
                   className="gt-input gt-name"
                   value={ex.name}
-                  placeholder="Ejercicio"
+                  placeholder={t('Ejercicio')}
                   data-row={i}
                   data-col="name"
                   onChange={(e) => updateExercise(i, { name: e.target.value })}
@@ -287,7 +290,7 @@ export default function RoutineTable({ day, onChange }) {
                 />
               </td>
               <td className="gt-gutter">
-                <button className="gt-row-remove" title="Eliminar ejercicio" onClick={() => removeRow(i)}>
+                <button className="gt-row-remove" title={t('Eliminar ejercicio')} onClick={() => removeRow(i)}>
                   🗑
                 </button>
               </td>
@@ -299,7 +302,7 @@ export default function RoutineTable({ day, onChange }) {
           >
             <td />
             <td colSpan={columns + 5}>
-              <button className="gt-new" onClick={() => addRow()}>+ Nuevo ejercicio</button>
+              <button className="gt-new" onClick={() => addRow()}>{t('+ Nuevo ejercicio')}</button>
             </td>
           </tr>
         </tbody>

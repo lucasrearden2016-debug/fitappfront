@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Dropdown } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 
 // Pills de días estilo "views" de Notion. Doble clic para renombrar.
 export default function DayTabs({ days, active, onSelect, onRename, onAdd, onDuplicate, onDelete, editable = true }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState('');
 
@@ -38,19 +40,19 @@ export default function DayTabs({ days, active, onSelect, onRename, onAdd, onDup
               className={`gym-day ${i === active ? 'active' : ''}`}
               onClick={() => onSelect(i)}
               onDoubleClick={() => editable && startRename(i)}
-              title={editable ? 'Doble clic para renombrar' : undefined}
+              title={editable ? t('Doble clic para renombrar') : undefined}
             >
               {d.name}
             </button>
             {editable && i === active && (
               <Dropdown className="gym-day-menu" popperConfig={{ strategy: 'fixed' }}>
-                <Dropdown.Toggle aria-label="Opciones del día">⌄</Dropdown.Toggle>
+                <Dropdown.Toggle aria-label={t('Opciones del día')}>⌄</Dropdown.Toggle>
                 <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => startRename(i)}>✎ Renombrar</Dropdown.Item>
-                  <Dropdown.Item onClick={() => onDuplicate(i)}>⧉ Duplicar</Dropdown.Item>
+                  <Dropdown.Item onClick={() => startRename(i)}>{t('✎ Renombrar')}</Dropdown.Item>
+                  <Dropdown.Item onClick={() => onDuplicate(i)}>{t('⧉ Duplicar')}</Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item className="text-danger" disabled={days.length === 1} onClick={() => onDelete(i)}>
-                    🗑 Eliminar día
+                    {t('🗑 Eliminar día')}
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
@@ -59,7 +61,7 @@ export default function DayTabs({ days, active, onSelect, onRename, onAdd, onDup
         )
       )}
       {editable && days.length < 7 && (
-        <button className="gym-day" onClick={onAdd} title="Agregar día">+ Día</button>
+        <button className="gym-day" onClick={onAdd} title={t('Agregar día')}>{t('+ Día')}</button>
       )}
     </div>
   );

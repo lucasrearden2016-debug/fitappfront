@@ -1,3 +1,5 @@
+import { lang } from '../i18n';
+
 // Helpers de la tabla de rutina
 
 export const uid = () => globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
@@ -19,7 +21,7 @@ export function parseSeries(text) {
 
 export function formatSeries(s) {
   if (!s?.reps && !s?.weightKg) return '';
-  if (s.weightKg) return `${s.weightKg}×${s.reps ?? ''}`;
+  if (s.weightKg) return `${lang() === 'en' ? s.weightKg : String(s.weightKg).replace('.', ',')}×${s.reps ?? ''}`;
   return String(s.reps);
 }
 

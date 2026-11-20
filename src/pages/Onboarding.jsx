@@ -8,7 +8,10 @@ import { toast } from 'react-toastify';
 import api, { showError } from '../api/client';
 import { setOnboarded } from '../store/authSlice';
 import TagInput from '../components/TagInput';
+import AccountSection from '../components/AccountSection';
+import { cleanDecimal, toInput, toNum } from '../utils/num';
 import './pages.css';
+import { useTranslation } from 'react-i18next';
 
 const empty = {
   sex: 'male', age: '', heightCm: '', weightKg: '', activityLevel: 'moderate', goal: 'maintain',
@@ -17,10 +20,12 @@ const empty = {
   experience: 'beginner', daysPerWeek: 3, minutesPerSession: 60, equipment: 'full_gym', gymGoals: '', injuries: '',
 };
 
+// Acepta coma decimal: "95,4"
+const decimal = () => Yup.number().transform((_, orig) => toNum(orig) ?? NaN).typeError('Número');
 const schema = Yup.object({
-  age: Yup.number().typeError('Número').min(14, 'Mínimo 14').max(100).required('Requerido'),
-  heightCm: Yup.number().typeError('Número').min(120, 'En cm, ej. 175').max(230).required('Requerido'),
-  weightKg: Yup.number().typeError('Número').min(35).max(300).required('Requerido'),
+  age: decimal().min(14, 'Mínimo 14').max(100, 'Valor fuera de rango').required('Requerido'),
+  heightCm: decimal().min(120, 'En cm, ej. 175').max(230, 'Valor fuera de rango').required('Requerido'),
+  weightKg: decimal().min(35, 'Valor fuera de rango').max(300, 'Valor fuera de rango').required('Requerido'),
   daysPerWeek: Yup.number().min(1).max(7),
 });
 
@@ -33,6 +38,8 @@ function toForm(u) {
   return {
     ...empty,
     ...u.profile,
+    heightCm: toInput(u.profile.heightCm),
+    weightKg: toInput(u.profile.weightKg),
     restrictions: u.profile.restrictions ?? [],
     canCook: f.filter((x) => x.liked && x.canCook).map((x) => x.name),
     liked: f.filter((x) => x.liked && !x.canCook).map((x) => x.name),
@@ -47,7 +54,7 @@ function toForm(u) {
 function toPayload(v) {
   return {
     profile: {
-      sex: v.sex, age: +v.age, heightCm: +v.heightCm, weightKg: +v.weightKg, activityLevel: v.activityLevel,
+      sex: v.sex, age: toNum(v.age), heightCm: toNum(v.heightCm), weightKg: toNum(v.weightKg), activityLevel: v.activityLevel,
       goal: v.goal, mealsPerDay: +v.mealsPerDay, restrictions: v.restrictions, cookingSkill: v.cookingSkill,
       maxCookingMinutes: +v.maxCookingMinutes, budget: v.budget,
     },
@@ -65,31 +72,34 @@ function toPayload(v) {
 
 // ---------- Campos reutilizables ----------
 function Segmented({ value, options, onChange }) {
+  const { t } = useTranslation();
   return (
     <div className="segmented">
       {options.map(([v, label]) => (
-        <button type="button" key={v} className={value === v ? 'active' : ''} onClick={() => onChange(v)}>{label}</button>
+        <button type="button" key={v} className={value === v ? 'active' : ''} onClick={() => onChange(v)}>{t(label)}</button>
       ))}
     </div>
   );
 }
 
 function Field({ label, help, children }) {
+  const { t } = useTranslation();
   return (
     <Form.Group className="mb-3">
-      <Form.Label>{label}</Form.Label>
+      <Form.Label>{t(label)}</Form.Label>
       {children}
-      {help && <div className="field-help">{help}</div>}
+      {help && <div className="field-help">{t(help)}</div>}
     </Form.Group>
   );
 }
 
 function Section({ title, desc, children }) {
+  const { t } = useTranslation();
   return (
     <section className="profile-section">
       <div>
-        <h5>{title}</h5>
-        <div className="desc">{desc}</div>
+        <h5>{t(title)}</h5>
+        <div className="desc">{t(desc)}</div>
       </div>
       <div>{children}</div>
     </section>
@@ -97,8 +107,10 @@ function Section({ title, desc, children }) {
 }
 
 export default function Onboarding() {
+  const { t } = useTranslation();
   const [initial, setInitial] = useState(null);
   const [targets, setTargets] = useState(null);
+  const [account, setAccount] = useState(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -106,6 +118,7 @@ export default function Onboarding() {
     api.get('/profile')
       .then(({ data }) => {
         setInitial(toForm(data));
+        setAccount({ email: data.email, username: data.username ?? '' });
         setTargets(data.targets);
       })
       .catch(() => setInitial(empty));
@@ -118,7 +131,7 @@ export default function Onboarding() {
       dispatch(setOnboarded());
       setTargets(data.targets);
       resetForm({ values });
-      toast.success(`Perfil guardado · ${data.targets.calories} kcal/día`);
+      toast.success(t('Perfil guardado · {{kcal}} kcal/día', { kcal: data.targets.calories }));
       if (firstTime) navigate('/');
     } catch (err) {
       showError(err);
@@ -129,28 +142,31 @@ export default function Onboarding() {
 
   return (
     <div className="profile-page">
-      <h1 className="page-title">Mi perfil</h1>
-      <p className="page-sub">Con esto la IA arma tu plan de comidas y tu rutina. Podés cambiarlo cuando quieras.</p>
+      <h1 className="page-title">{t('Mi perfil')}</h1>
+      <p className="page-sub">{t('Con esto se calculan tus calorías y la IA arma tu plan y tu rutina. Podés cambiarlo cuando quieras.')}</p>
+
+      {account && <AccountSection email={account.email} username={account.username} />}
 
       {targets && (
         <div className="profile-targets">
-          <div><div className="label">Objetivo diario</div><div className="value">{targets.calories} kcal</div></div>
-          <div><div className="label">Proteína</div><div className="value">{targets.protein} g</div></div>
-          <div><div className="label">Carbohidratos</div><div className="value">{targets.carbs} g</div></div>
-          <div><div className="label">Grasas</div><div className="value">{targets.fat} g</div></div>
+          <div><div className="label">{t('Objetivo diario')}</div><div className="value">{targets.calories} kcal</div></div>
+          <div><div className="label">{t('Proteína')}</div><div className="value">{targets.protein} g</div></div>
+          <div><div className="label">{t('Carbohidratos')}</div><div className="value">{targets.carbs} g</div></div>
+          <div><div className="label">{t('Grasas')}</div><div className="value">{targets.fat} g</div></div>
         </div>
       )}
 
       <Formik initialValues={initial} validationSchema={schema} onSubmit={onSubmit} enableReinitialize>
         {({ values, setFieldValue, getFieldProps: fp, errors, touched, isSubmitting, dirty }) => {
           const num = (name) => ({
-            type: 'number',
+            inputMode: 'decimal',
             ...fp(name),
+            onChange: (e) => setFieldValue(name, cleanDecimal(e.target.value)),
             isInvalid: touched[name] && !!errors[name],
           });
           const select = (name, options) => (
             <Form.Select {...fp(name)}>
-              {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {options.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
             </Form.Select>
           );
 
@@ -163,9 +179,9 @@ export default function Onboarding() {
                 <Row>
                   {[['age', 'Edad', 'años'], ['heightCm', 'Altura', 'cm'], ['weightKg', 'Peso', 'kg']].map(([name, label, unit]) => (
                     <Col xs={4} key={name}>
-                      <Field label={`${label} (${unit})`}>
+                      <Field label={`${t(label)} (${t(unit)})`}>
                         <Form.Control {...num(name)} />
-                        <Form.Control.Feedback type="invalid">{errors[name]}</Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{t(errors[name] ?? '')}</Form.Control.Feedback>
                       </Field>
                     </Col>
                   ))}
@@ -185,16 +201,16 @@ export default function Onboarding() {
 
               <Section title="Alimentación" desc="Escribí y apretá Enter para agregar. Mientras más cargues, mejor te conoce la IA.">
                 <Field label="👨‍🍳 Comidas que sabés cocinar" help="Ej: milanesas, tortilla, arroz con pollo">
-                  <TagInput variant="green" value={values.canCook} onChange={(v) => setFieldValue('canCook', v)} placeholder="Agregá una comida…" />
+                  <TagInput variant="green" value={values.canCook} onChange={(v) => setFieldValue('canCook', v)} placeholder={t('Agregá una comida…')} />
                 </Field>
                 <Field label="👍 Alimentos o comidas que te gustan">
-                  <TagInput variant="blue" value={values.liked} onChange={(v) => setFieldValue('liked', v)} placeholder="Agregá algo que te guste…" suggestions={FOOD_SUGGESTIONS} />
+                  <TagInput variant="blue" value={values.liked} onChange={(v) => setFieldValue('liked', v)} placeholder={t('Agregá algo que te guste…')} suggestions={FOOD_SUGGESTIONS.map((s) => t(s))} />
                 </Field>
                 <Field label="👎 Lo que no te gusta">
-                  <TagInput variant="red" value={values.disliked} onChange={(v) => setFieldValue('disliked', v)} placeholder="La IA lo va a evitar…" />
+                  <TagInput variant="red" value={values.disliked} onChange={(v) => setFieldValue('disliked', v)} placeholder={t('La IA lo va a evitar…')} />
                 </Field>
                 <Field label="Restricciones o alergias">
-                  <TagInput value={values.restrictions} onChange={(v) => setFieldValue('restrictions', v)} placeholder="Ninguna" suggestions={RESTRICTION_SUGGESTIONS} />
+                  <TagInput value={values.restrictions} onChange={(v) => setFieldValue('restrictions', v)} placeholder={t('Ninguna')} suggestions={RESTRICTION_SUGGESTIONS.map((s) => t(s))} />
                 </Field>
                 <Row>
                   <Col sm={6}><Field label="Comidas por día">{select('mealsPerDay', [[2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6']])}</Field></Col>
@@ -220,18 +236,18 @@ export default function Onboarding() {
                   <Col sm={6}><Field label="Dónde entrenás">{select('equipment', [['full_gym', 'Gimnasio completo'], ['home_basic', 'Casa con mancuernas/barra'], ['bodyweight', 'Solo peso corporal']])}</Field></Col>
                 </Row>
                 <Field label="¿Qué querés lograr?">
-                  <Form.Control as="textarea" rows={2} {...fp('gymGoals')} placeholder="Ej: subir mi press de banca, ganar espalda, marcar abdomen" />
+                  <Form.Control as="textarea" rows={2} {...fp('gymGoals')} placeholder={t('Ej: subir mi press de banca, ganar espalda, marcar abdomen')} />
                 </Field>
                 <Field label="Lesiones o limitaciones">
-                  <Form.Control as="textarea" rows={2} {...fp('injuries')} placeholder="Ej: molestia en hombro derecho" />
+                  <Form.Control as="textarea" rows={2} {...fp('injuries')} placeholder={t('Ej: molestia en hombro derecho')} />
                 </Field>
               </Section>
 
               <div className="save-bar">
                 <div className="inner">
-                  {dirty && <span className="text-muted small">Tenés cambios sin guardar</span>}
+                  {dirty && <span className="text-muted small">{t('Tenés cambios sin guardar')}</span>}
                   <Button type="submit" disabled={isSubmitting || (!dirty && !!targets)}>
-                    {isSubmitting ? 'Guardando…' : targets ? 'Guardar cambios' : 'Guardar y empezar'}
+                    {isSubmitting ? t('Guardando…') : targets ? t('Guardar cambios') : t('Guardar y empezar')}
                   </Button>
                 </div>
               </div>

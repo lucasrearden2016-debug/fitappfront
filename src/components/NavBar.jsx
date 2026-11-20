@@ -1,8 +1,10 @@
-import { Container, Nav, Navbar, Button } from 'react-bootstrap';
+import { Container, Dropdown, Nav, Navbar, Button } from 'react-bootstrap';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { logout } from '../store/authSlice';
 import { useTheme } from '../hooks/useTheme';
+import { LANGS, setLanguage } from '../i18n';
 
 const LINKS = [
   ['/plan', 'Comidas', '🥗'],
@@ -10,7 +12,27 @@ const LINKS = [
   ['/onboarding', 'Perfil', '👤'],
 ];
 
+export function LanguagePicker() {
+  const { i18n } = useTranslation();
+  const current = i18n.resolvedLanguage;
+  return (
+    <Dropdown align="end">
+      <Dropdown.Toggle as="button" className="theme-toggle lang-toggle" aria-label="Idioma">
+        {current?.toUpperCase()}
+      </Dropdown.Toggle>
+      <Dropdown.Menu>
+        {LANGS.map(([code, label]) => (
+          <Dropdown.Item key={code} active={code === current} onClick={() => setLanguage(code)}>
+            {label}
+          </Dropdown.Item>
+        ))}
+      </Dropdown.Menu>
+    </Dropdown>
+  );
+}
+
 export default function NavBar() {
+  const { t } = useTranslation();
   const { user } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -30,17 +52,18 @@ export default function NavBar() {
           </Navbar.Brand>
           {user && (
             <Nav className="me-auto gap-1 nav-desktop">
-              {LINKS.map(([to, label]) => <Nav.Link key={to} as={NavLink} to={to}>{label}</Nav.Link>)}
+              {LINKS.map(([to, label]) => <Nav.Link key={to} as={NavLink} to={to}>{t(label)}</Nav.Link>)}
             </Nav>
           )}
           <div className="d-flex align-items-center gap-1 ms-auto">
-            <button className="theme-toggle" onClick={toggle} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} aria-label="Cambiar tema">
+            <LanguagePicker />
+            <button className="theme-toggle" onClick={toggle} title={theme === 'dark' ? t('Modo claro') : t('Modo oscuro')} aria-label={t('Cambiar tema')}>
               {theme === 'dark' ? '☀︎' : '☾'}
             </button>
             {user && (
               <>
                 <span className="text-muted small mx-2 nav-desktop">{user.name}</span>
-                <Button size="sm" variant="light" onClick={exit}>Salir</Button>
+                <Button size="sm" variant="light" onClick={exit}>{t('Salir')}</Button>
               </>
             )}
           </div>
@@ -50,9 +73,9 @@ export default function NavBar() {
       {/* Barra inferior en celular */}
       {user && (
         <nav className="app-tabbar">
-          <NavLink to="/" end><span className="ico">🏠</span>Inicio</NavLink>
+          <NavLink to="/" end><span className="ico">🏠</span>{t('Inicio')}</NavLink>
           {LINKS.map(([to, label, ico]) => (
-            <NavLink key={to} to={to}><span className="ico">{ico}</span>{label}</NavLink>
+            <NavLink key={to} to={to}><span className="ico">{ico}</span>{t(label)}</NavLink>
           ))}
         </nav>
       )}

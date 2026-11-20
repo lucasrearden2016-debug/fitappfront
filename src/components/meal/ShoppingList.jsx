@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
+import i18n from '../../i18n';
+import { sectionLabel } from '../../i18n/labels';
+import { useTranslation } from 'react-i18next';
 
 const ICONS = {
   'Verdulería': '🥬',
@@ -17,6 +20,7 @@ const normalize = (items) => items.map((i) => (typeof i === 'string' ? { item: i
 
 // Lista de compras por sección del súper, con tildes que se recuerdan en este navegador
 export default function ShoppingList({ planId, items: rawItems }) {
+  const { t } = useTranslation();
   const items = normalize(rawItems);
   const storageKey = `shopping:${planId}`;
   const [checked, setChecked] = useState(() => {
@@ -43,15 +47,15 @@ export default function ShoppingList({ planId, items: rawItems }) {
     const text = sections
       .map((s) => {
         const list = pending.filter((i) => i.section === s);
-        return list.length ? `*${s}*\n${list.map((i) => `• ${i.item}`).join('\n')}` : '';
+        return list.length ? `*${sectionLabel(s)}*\n${list.map((i) => `• ${i.item}`).join('\n')}` : '';
       })
       .filter(Boolean)
       .join('\n\n');
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('Lista copiada: pegala en WhatsApp o en tus notas');
+      toast.success(i18n.t('Lista copiada: pegala en WhatsApp o en tus notas'));
     } catch {
-      toast.error('No se pudo copiar');
+      toast.error(i18n.t('No se pudo copiar'));
     }
   };
 
@@ -61,12 +65,12 @@ export default function ShoppingList({ planId, items: rawItems }) {
     <div className="shopping">
       <div className="shopping-head">
         <div>
-          <div className="shopping-count">{count}/{items.length} en el carrito</div>
+          <div className="shopping-count">{t('{{done}}/{{total}} en el carrito', { done: count, total: items.length })}</div>
           <div className="shopping-bar"><div style={{ width: `${items.length ? (count / items.length) * 100 : 0}%` }} /></div>
         </div>
         <div className="d-flex gap-2">
-          {count > 0 && <Button size="sm" variant="ghost" onClick={() => setChecked({})}>Destildar todo</Button>}
-          <Button size="sm" variant="light" onClick={copy} disabled={!pending.length}>📋 Copiar pendientes</Button>
+          {count > 0 && <Button size="sm" variant="ghost" onClick={() => setChecked({})}>{t('Destildar todo')}</Button>}
+          <Button size="sm" variant="light" onClick={copy} disabled={!pending.length}>{t('📋 Copiar pendientes')}</Button>
         </div>
       </div>
 
@@ -77,7 +81,7 @@ export default function ShoppingList({ planId, items: rawItems }) {
           return (
             <section key={s} className="shopping-section">
               <h6>
-                <span>{ICONS[s] ?? '🛍️'} {s}</span>
+                <span>{ICONS[s] ?? '🛍️'} {sectionLabel(s)}</span>
                 <span className="text-muted">{done}/{list.length}</span>
               </h6>
               <ul className="shopping-list">

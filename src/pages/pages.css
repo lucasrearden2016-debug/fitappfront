@@ -277,3 +277,15 @@
 @media (max-width: 767.98px) {
   .profile-section { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Cuenta (Mi perfil) */
+.account-box {
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+.account-box.needs { border-color: rgba(35, 131, 226, 0.45); background: rgba(35, 131, 226, 0.04); }
+.account-row { display: flex; align-items: baseline; gap: 1rem; padding: 0.4rem 0; font-size: 0.875rem; }
+.account-row + .account-row { border-top: 1px solid var(--app-border); }
+.account-row .label { width: 64px; flex: none; color: var(--app-muted); font-size: 0.8125rem; }

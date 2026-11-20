@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Button, Col, Form, Modal, Row, Spinner } from 'react-bootstrap';
 import api, { showError } from '../../api/client';
-import { shortDay } from './mealUtils';
 import FoodSearch from './FoodSearch';
 import FoodForm from './FoodForm';
 import { isLinked, linkFood, macrosOf, sumIngredients, unlink } from '../../utils/foods';
+import { cleanDecimal, toInput, toNum } from '../../utils/num';
+import { brandLabel, dayLabel, dayShort, mealTypeLabel, unitLabel } from '../../i18n/labels';
+import { useTranslation } from 'react-i18next';
 
 const LINK_KEYS = ['foodId', 'brand', 'per100', 'baseUnit', 'unitName', 'unitGrams'];
 const pickLink = (i) => Object.fromEntries(LINK_KEYS.filter((k) => i[k] != null && i[k] !== '').map((k) => [k, i[k]]));
@@ -23,12 +25,12 @@ const fromMeal = (m) => ({
   name: m.name,
   description: m.description ?? '',
   ingredients: m.ingredients?.length
-    ? m.ingredients.map((i) => ({ amount: i.amount || '', unit: i.unit || 'g', name: i.name, section: i.section, ...pickLink(i) }))
+    ? m.ingredients.map((i) => ({ amount: i.amount ? toInput(i.amount) : '', unit: i.unit || 'g', name: i.name, section: i.section, ...pickLink(i) }))
     : [emptyIng()],
-  calories: m.calories ?? '',
-  protein: m.protein ?? '',
-  carbs: m.carbs ?? '',
-  fat: m.fat ?? '',
+  calories: toInput(m.calories),
+  protein: toInput(m.protein),
+  carbs: toInput(m.carbs),
+  fat: toInput(m.fat),
   steps: m.recipe?.steps?.join('\n') ?? '',
 });
 
@@ -37,6 +39,7 @@ const fromMeal = (m) => ({
  * La IA es opcional: solo si tocás "Calcular macros".
  */
 export default function MealEditor({ show, meal, defaultType, days = [], dayIndex = 0, favorites = [], onHide, onSave, mode = 'plan' }) {
+  const { t } = useTranslation();
   const isFav = mode === 'favorite';
   const [form, setForm] = useState(blank(defaultType));
   const [repeat, setRepeat] = useState([]);
@@ -62,7 +65,7 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
   const computed = sumIngredients(form.ingredients);
   // Lo que se muestra/guarda: calculado con alimentos o escrito a mano
   const macro = (k) => (auto ? Math.round(computed[k]) : form[k]);
-  const kcalFromMacros = Math.round((+macro('protein') || 0) * 4 + (+macro('carbs') || 0) * 4 + (+macro('fat') || 0) * 9);
+  const kcalFromMacros = Math.round((toNum(macro('protein')) || 0) * 4 + (toNum(macro('carbs')) || 0) * 4 + (toNum(macro('fat')) || 0) * 9);
 
   const setMacro = (k, v) => {
     if (auto) {
@@ -77,7 +80,7 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
   const cleanIngredients = () =>
     form.ingredients
       .filter((i) => i.name.trim())
-      .map((i) => ({ name: i.name.trim(), amount: Number(String(i.amount).replace(',', '.')) || 0, unit: i.unit, section: i.section, ...pickLink(i) }));
+      .map((i) => ({ name: i.name.trim(), amount: toNum(i.amount) || 0, unit: i.unit, section: i.section, ...pickLink(i) }));
 
   const estimate = async () => {
     setEstimating(true);
@@ -88,7 +91,7 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
         ingredients: cleanIngredients().map(({ section: _s, ...i }) => i),
       });
       set({
-        calories: data.calories, protein: data.protein, carbs: data.carbs, fat: data.fat,
+        calories: toInput(data.calories), protein: toInput(data.protein), carbs: toInput(data.carbs), fat: toInput(data.fat),
         ingredients: data.ingredients.map((i) => ({ amount: i.amount || '', unit: i.unit, name: i.name, section: i.section, ...pickLink(i) })),
       });
       setManual(true);
@@ -118,10 +121,10 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
           name: form.name.trim(),
           description: form.description.trim(),
           ingredients: cleanIngredients(),
-          calories: Number(macro('calories')) || kcalFromMacros,
-          protein: Number(macro('protein')) || 0,
-          carbs: Number(macro('carbs')) || 0,
-          fat: Number(macro('fat')) || 0,
+          calories: toNum(macro('calories')) || kcalFromMacros,
+          protein: toNum(macro('protein')) || 0,
+          carbs: toNum(macro('carbs')) || 0,
+          fat: toNum(macro('fat')) || 0,
           ...(steps.length && { recipe: { steps, timeMinutes: meal?.recipe?.timeMinutes ?? 0 } }),
         },
         repeatDays: repeat,
@@ -136,7 +139,7 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
       <Modal show onHide={onHide} size="lg" scrollable fullscreen="sm-down" className="meal-editor-modal">
         <Modal.Header closeButton>
           <Modal.Title as="h5">
-            <button type="button" className="me-back" onClick={() => setCreatingFood(null)}>←</button> Nuevo alimento
+            <button type="button" className="me-back" onClick={() => setCreatingFood(null)}>←</button> {t('Nuevo alimento')}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -158,36 +161,36 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
       <Form onSubmit={submit}>
         <Modal.Header closeButton>
           <Modal.Title as="h5">
-            {isFav ? (editing ? 'Editar favorita' : 'Nueva favorita') : editing ? 'Editar comida' : `Agregar comida · ${days[dayIndex] ?? ''}`}
+            {isFav ? (editing ? t('Editar favorita') : t('Nueva favorita')) : editing ? t('Editar comida') : `${t('Agregar comida')} · ${dayLabel(days[dayIndex] ?? '')}`}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="meal-editor">
           {!editing && !isFav && favorites.length > 0 && (
             <Form.Select className="mb-3" defaultValue="" onChange={(e) => fromFavorite(e.target.value)}>
-              <option value="" disabled>⭐ Cargar desde mis favoritas…</option>
+              <option value="" disabled>{t('⭐ Cargar desde mis favoritas…')}</option>
               {favorites.map((f) => <option key={f._id} value={f._id}>{f.name}</option>)}
             </Form.Select>
           )}
 
           <div className="segmented mb-3">
-            {MEAL_TYPES.map((t) => (
-              <button key={t} type="button" className={form.type === t ? 'active' : ''} onClick={() => set({ type: t })}>{t}</button>
+            {MEAL_TYPES.map((ty) => (
+              <button key={ty} type="button" className={form.type === ty ? 'active' : ''} onClick={() => set({ type: ty })}>{mealTypeLabel(ty)}</button>
             ))}
           </div>
 
-          <Form.Control className="me-name" placeholder="Nombre de la comida" value={form.name} onChange={(e) => set({ name: e.target.value })} required maxLength={120} autoFocus />
-          <Form.Control className="mt-2" size="sm" placeholder="Descripción (opcional)" value={form.description} onChange={(e) => set({ description: e.target.value })} maxLength={500} />
+          <Form.Control className="me-name" placeholder={t('Nombre de la comida')} value={form.name} onChange={(e) => set({ name: e.target.value })} required maxLength={120} autoFocus />
+          <Form.Control className="mt-2" size="sm" placeholder={t('Descripción (opcional)')} value={form.description} onChange={(e) => set({ description: e.target.value })} maxLength={500} />
 
-          <h6 className="recipe-h">Ingredientes</h6>
+          <h6 className="recipe-h">{t('Ingredientes')}</h6>
           {form.ingredients.map((ing, i) => {
             const linked = isLinked(ing);
             const units = linked ? [ing.baseUnit, ...(ing.unitName ? [ing.unitName] : [])] : UNITS;
             const m = linked ? macrosOf(ing) : null;
             return (
               <div className={`me-ing ${linked ? 'linked' : ''}`} key={i}>
-                <Form.Control size="sm" inputMode="decimal" placeholder="Cant." value={ing.amount} disabled={ing.unit === 'a gusto'} onChange={(e) => setIng(i, { amount: e.target.value })} />
+                <Form.Control size="sm" inputMode="decimal" placeholder={t('Cant.')} value={ing.amount} disabled={ing.unit === 'a gusto'} onChange={(e) => setIng(i, { amount: cleanDecimal(e.target.value) })} />
                 <Form.Select size="sm" value={ing.unit} onChange={(e) => setIng(i, { unit: e.target.value })}>
-                  {units.map((u) => <option key={u}>{u}</option>)}
+                  {units.map((u) => <option key={u} value={u}>{unitLabel(u)}</option>)}
                 </Form.Select>
                 <FoodSearch
                   value={ing.name}
@@ -197,57 +200,56 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
                   onCreate={(name) => setCreatingFood({ index: i, name })}
                   onEnter={() => set({ ingredients: [...form.ingredients, emptyIng()] })}
                 />
-                <button type="button" className="me-remove" title="Quitar" onClick={() => set({ ingredients: form.ingredients.filter((_, j) => j !== i) })}>×</button>
+                <button type="button" className="me-remove" title={t('Quitar')} onClick={() => set({ ingredients: form.ingredients.filter((_, j) => j !== i) })}>×</button>
                 {linked && (
                   <div className="me-ing-meta">
-                    🔗 {ing.brand} · <b>{Math.round(m.calories)} kcal</b> · P {Math.round(m.protein)} · C {Math.round(m.carbs)} · G {Math.round(m.fat)}
+                    🔗 {brandLabel(ing.brand)} · <b>{Math.round(m.calories)} kcal</b> · P {Math.round(m.protein)} · C {Math.round(m.carbs)} · G {Math.round(m.fat)}
                   </div>
                 )}
               </div>
             );
           })}
-          <button type="button" className="gt-new" onClick={() => set({ ingredients: [...form.ingredients, emptyIng()] })}>+ Ingrediente</button>
+          <button type="button" className="gt-new" onClick={() => set({ ingredients: [...form.ingredients, emptyIng()] })}>{t('+ Ingrediente')}</button>
 
           <div className="d-flex justify-content-between align-items-end mt-3 mb-2">
-            <h6 className="recipe-h m-0">Macros</h6>
+            <h6 className="recipe-h m-0">{t('Macros')}</h6>
             <Button size="sm" variant="light" onClick={estimate} disabled={!form.name.trim() || estimating}>
-              {estimating ? <><Spinner size="sm" /> Calculando…</> : '✨ Calcular macros con IA'}
+              {estimating ? <><Spinner size="sm" /> {t('Calculando…')}</> : t('✨ Calcular macros con IA')}
             </Button>
           </div>
           <Row className="g-2">
             {[['calories', 'kcal'], ['protein', 'Proteína (g)'], ['carbs', 'Carbos (g)'], ['fat', 'Grasas (g)']].map(([k, label]) => (
               <Col xs={6} md={3} key={k}>
-                <Form.Label className="small text-muted mb-1">{label}</Form.Label>
+                <Form.Label className="small text-muted mb-1">{t(label)}</Form.Label>
                 <Form.Control
                   size="sm"
-                  type="number"
-                  min={0}
+                  inputMode="decimal"
                   value={macro(k)}
                   className={auto ? 'is-auto' : ''}
                   placeholder={k === 'calories' && kcalFromMacros ? String(kcalFromMacros) : '0'}
-                  onChange={(e) => setMacro(k, e.target.value)}
+                  onChange={(e) => setMacro(k, cleanDecimal(e.target.value))}
                 />
               </Col>
             ))}
           </Row>
           {auto ? (
             <div className="field-help me-auto-note">
-              ✓ Calculado con tus alimentos{unlinkedCount > 0 && ` · ${unlinkedCount} ingrediente${unlinkedCount > 1 ? 's' : ''} sin vincular no suma${unlinkedCount > 1 ? 'n' : ''}`}
+              {t('✓ Calculado con tus alimentos')}{unlinkedCount > 0 && ` · ${t('{{n}} sin vincular (no suman)', { n: unlinkedCount })}`}
             </div>
           ) : linkedCount > 0 ? (
             <div className="field-help">
-              Macros escritos a mano. <button type="button" className="btn btn-link btn-sm p-0 align-baseline" onClick={() => setManual(false)}>↺ Calcular con los alimentos</button>
+              {t('Macros escritos a mano.')} <button type="button" className="btn btn-link btn-sm p-0 align-baseline" onClick={() => setManual(false)}>{t('↺ Calcular con los alimentos')}</button>
             </div>
           ) : (
-            <div className="field-help">Buscá los ingredientes en Alimentos y los macros se calculan solos. Si no, escribilos o tocá “Calcular con IA”.</div>
+            <div className="field-help">{t('Buscá los ingredientes en Alimentos y los macros se calculan solos. Si no, escribilos o tocá “Calcular con IA”.')}</div>
           )}
 
-          <h6 className="recipe-h">Preparación (opcional)</h6>
-          <Form.Control as="textarea" rows={3} size="sm" placeholder={'Un paso por línea.\nSi lo dejás vacío, la IA escribe la receta cuando la abras.'} value={form.steps} onChange={(e) => set({ steps: e.target.value })} />
+          <h6 className="recipe-h">{t('Preparación (opcional)')}</h6>
+          <Form.Control as="textarea" rows={3} size="sm" placeholder={t('Un paso por línea.\nSi lo dejás vacío, la IA escribe la receta cuando la abras.')} value={form.steps} onChange={(e) => set({ steps: e.target.value })} />
 
           {!editing && !isFav && (
             <>
-              <h6 className="recipe-h">Repetir también en</h6>
+              <h6 className="recipe-h">{t('Repetir también en')}</h6>
               <div className="segmented">
                 {days.map((d, i) => i !== dayIndex && (
                   <button
@@ -256,7 +258,7 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
                     className={repeat.includes(i) ? 'active' : ''}
                     onClick={() => setRepeat((r) => (r.includes(i) ? r.filter((x) => x !== i) : [...r, i]))}
                   >
-                    {shortDay(d)}
+                    {dayShort(d)}
                   </button>
                 ))}
               </div>
@@ -264,9 +266,9 @@ export default function MealEditor({ show, meal, defaultType, days = [], dayInde
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={onHide}>Cancelar</Button>
+          <Button variant="light" onClick={onHide}>{t('Cancelar')}</Button>
           <Button type="submit" disabled={!form.name.trim() || saving}>
-            {saving ? <Spinner size="sm" /> : editing ? 'Guardar cambios' : isFav ? 'Guardar favorita' : repeat.length ? `Agregar a ${repeat.length + 1} días` : 'Agregar'}
+            {saving ? <Spinner size="sm" /> : editing ? t('Guardar cambios') : isFav ? t('Guardar favorita') : repeat.length ? t('Agregar a {{n}} días', { n: repeat.length + 1 }) : t('Agregar')}
           </Button>
         </Modal.Footer>
       </Form>

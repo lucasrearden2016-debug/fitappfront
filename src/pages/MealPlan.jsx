@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Dropdown, Form, Modal, Spinner } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api, { showError } from '../api/client';
 import RecipeDrawer from '../components/meal/RecipeDrawer';
@@ -12,9 +11,11 @@ import MealEditor, { MEAL_TYPES } from '../components/meal/MealEditor';
 import FavoritesView from '../components/meal/FavoritesView';
 import FavoritePicker from '../components/meal/FavoritePicker';
 import FoodsView from '../components/meal/FoodsView';
-import { isToday, shortDay, sumMacros, todayIndex } from '../components/meal/mealUtils';
+import { isToday, sumMacros, todayIndex } from '../components/meal/mealUtils';
+import { dateFmt, dayLabel, dayShort, mealTypeLabel } from '../i18n/labels';
 import '../components/gym/gym.css';
 import '../components/meal/meal.css';
+import { useTranslation } from 'react-i18next';
 
 const QUICK_FEEDBACK = ['Más variedad', 'Cenas más rápidas', 'Menos pollo', 'Más pescado', 'Más económico', 'Más proteína', 'Desayunos dulces', 'Para llevar al trabajo'];
 const MACROS = [
@@ -23,15 +24,16 @@ const MACROS = [
   ['carbs', 'Carbohidratos', 'g'],
   ['fat', 'Grasas', 'g'],
 ];
-const fmtWeek = (d) => new Date(d).toLocaleDateString('es', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const fmtWeek = (d) => dateFmt(d, { day: 'numeric', month: 'long', timeZone: 'UTC' });
 
 function MacroBar({ label, unit, value, target }) {
+  const { t } = useTranslation();
   const pct = target ? (value / target) * 100 : 0;
   const tone = pct > 110 ? 'over' : pct >= 90 ? 'ok' : 'under';
   return (
     <div className="macro">
       <div className="macro-top">
-        <span>{label}</span>
+        <span>{t(label)}</span>
         <span><b>{Math.round(value)}</b> / {target} {unit}</span>
       </div>
       <div className="macro-track"><div className={`macro-fill ${tone}`} style={{ width: `${Math.min(pct, 100)}%` }} /></div>
@@ -40,6 +42,7 @@ function MacroBar({ label, unit, value, target }) {
 }
 
 export default function MealPlan() {
+  const { t } = useTranslation();
   const [plan, setPlan] = useState(null);
   const [isCurrentWeek, setIsCurrentWeek] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -96,7 +99,7 @@ export default function MealPlan() {
     try {
       const { data } = await api.post(`/mealplans/${plan._id}/meals/${meal._id}/swap`, {});
       replaceInPlan(meal._id, data.meal, data.shoppingList);
-      toast.success(`Nueva opción: ${data.meal.name}`);
+      toast.success(t('Nueva opción: {{name}}', { name: data.meal.name }));
     } catch (err) {
       showError(err);
     } finally {
@@ -122,7 +125,7 @@ export default function MealPlan() {
           meal: { ...rest, ingredients: rest.ingredients.map(({ name, amount, unit, quantity, section }) => ({ name, amount, unit, quantity, section })) },
         });
         setFavorites(data);
-        toast.success('⭐ Guardada: la IA la va a incluir en tus próximos planes');
+        toast.success(t('⭐ Guardada: la IA la va a incluir en tus próximos planes'));
       }
     } catch (err) {
       showError(err);
@@ -134,14 +137,14 @@ export default function MealPlan() {
     setPlan((p) => ({ ...p, shoppingList, days: p.days.map((d, j) => (j === i ? { ...d, meals } : d)) }));
 
   const createBlank = async () => {
-    if (plan && !confirm('Se va a reemplazar el plan de esta semana por uno vacío. ¿Seguimos?')) return;
+    if (plan && !confirm(t('Se va a reemplazar el plan de esta semana por uno vacío. ¿Seguimos?'))) return;
     try {
       const { data } = await api.post('/mealplans/blank');
       setPlan(data);
       setIsCurrentWeek(true);
       setDayIndex(todayIndex(data.days));
       setView('week');
-      toast.success('Plan en blanco listo: agregá tus comidas día por día');
+      toast.success(t('Plan en blanco listo: agregá tus comidas día por día'));
     } catch (err) {
       showError(err);
     }
@@ -165,7 +168,7 @@ export default function MealPlan() {
   };
 
   const deleteMeal = async (meal) => {
-    if (!confirm(`¿Eliminar "${meal.name}"?`)) return;
+    if (!confirm(t('¿Eliminar "{{name}}"?', { name: meal.name }))) return;
     try {
       const { data } = await api.delete(`/mealplans/${plan._id}/meals/${meal._id}`);
       setPlan((p) => ({
@@ -183,7 +186,7 @@ export default function MealPlan() {
     try {
       const { data } = await api.post(`/mealplans/${plan._id}/days/${dayIndex}/suggest`, { type });
       setDay(dayIndex, data.meals, data.shoppingList);
-      toast.success(`Sugerencia: ${data.meal.name}`);
+      toast.success(t('Sugerencia: {{name}}', { name: data.meal.name }));
     } catch (err) {
       showError(err);
     } finally {
@@ -211,14 +214,14 @@ export default function MealPlan() {
         : await api.post('/profile/favorites', { meal });
       setFavorites(data);
       setFavEditor(null);
-      toast.success('⭐ Favorita guardada');
+      toast.success(t('⭐ Favorita guardada'));
     } catch (err) {
       showError(err);
     }
   };
 
   const deleteFavorite = async (f) => {
-    if (!confirm(`¿Eliminar "${f.name}" de tus favoritas?`)) return;
+    if (!confirm(t('¿Eliminar "{{name}}" de tus favoritas?', { name: f.name }))) return;
     try {
       const { data } = await api.delete(`/profile/favorites/${f._id}`);
       setFavorites(data);
@@ -231,13 +234,16 @@ export default function MealPlan() {
     try {
       const { data } = await api.post(`/mealplans/${plan._id}/days/${i}/meals`, { meal: favToMeal(f) });
       setDay(i, data.meals, data.shoppingList);
-      toast.success(`${f.name} → ${plan.days[i].day}`);
+      toast.success(`${f.name} → ${dayLabel(plan.days[i].day)}`);
     } catch (err) {
       showError(err);
     }
   };
 
-  const addChip = (text) => setFeedback((f) => (f.toLowerCase().includes(text.toLowerCase()) ? f : f ? `${f}, ${text.toLowerCase()}` : text));
+  const addChip = (raw) => {
+    const text = t(raw);
+    setFeedback((f) => (f.toLowerCase().includes(text.toLowerCase()) ? f : f ? `${f}, ${text.toLowerCase()}` : text));
+  };
 
   const generate = async () => {
     setShowGenerate(false);
@@ -261,10 +267,10 @@ export default function MealPlan() {
 
   const generateModal = (
     <Modal show={showGenerate} onHide={() => setShowGenerate(false)} centered>
-      <Modal.Header closeButton><Modal.Title as="h5">{plan ? 'Nuevo plan semanal' : 'Tu primer plan'}</Modal.Title></Modal.Header>
+      <Modal.Header closeButton><Modal.Title as="h5">{plan ? t('Nuevo plan semanal') : t('Tu primer plan')}</Modal.Title></Modal.Header>
       <Modal.Body>
         <p className="text-muted small">
-          La IA usa tu perfil (comidas que te gustan, restricciones y objetivo). Si querés, decile qué cambiar esta semana.
+          {t('La IA usa tu perfil (comidas que te gustan, restricciones y objetivo). Si querés, decile qué cambiar esta semana.')}
         </p>
         <Form.Control
           as="textarea"
@@ -272,15 +278,15 @@ export default function MealPlan() {
           value={feedback}
           maxLength={500}
           onChange={(e) => setFeedback(e.target.value)}
-          placeholder="Ej: menos pollo, cenas rápidas, quiero comer pescado dos veces…"
+          placeholder={t('Ej: menos pollo, cenas rápidas, quiero comer pescado dos veces…')}
         />
         <div className="tag-suggestions-inline">
-          {QUICK_FEEDBACK.map((q) => <button key={q} type="button" onClick={() => addChip(q)}>+ {q}</button>)}
+          {QUICK_FEEDBACK.map((q) => <button key={q} type="button" onClick={() => addChip(q)}>+ {t(q)}</button>)}
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={() => setShowGenerate(false)}>Cancelar</Button>
-        <Button onClick={generate}>✨ Generar plan</Button>
+        <Button variant="light" onClick={() => setShowGenerate(false)}>{t('Cancelar')}</Button>
+        <Button onClick={generate}>{t('✨ Generar plan')}</Button>
       </Modal.Footer>
     </Modal>
   );
@@ -290,18 +296,17 @@ export default function MealPlan() {
       <div className="meal-page">
         <div className="gym-empty meal-empty">
           <div className="gym-empty-icon">🥗</div>
-          <h4>Tu plan de comidas</h4>
+          <h4>{t('Tu plan de comidas')}</h4>
           <p className="text-muted mb-4">
-            Un plan de 7 días con comidas que te gustan, ajustado a tus calorías, con recetas y lista de compras.
-            ¿No cargaste tus comidas? Hacelo en <Link to="/onboarding">Mi perfil</Link>.
+            {t('Armalo vos con tus alimentos y favoritas, o pedile a la IA un plan de 7 días con recetas y lista de compras.')}
           </p>
           <div className="d-flex gap-2 justify-content-center flex-wrap">
             <Button onClick={() => setShowGenerate(true)} disabled={generating}>
-              {generating ? <><Spinner size="sm" /> Generando tu semana…</> : '✨ Generar con IA'}
+              {generating ? <><Spinner size="sm" /> {t('Generando tu semana…')}</> : t('✨ Generar con IA')}
             </Button>
-            <Button variant="light" onClick={createBlank} disabled={generating}>✎ Armarlo yo</Button>
+            <Button variant="light" onClick={createBlank} disabled={generating}>{t('✎ Armarlo yo')}</Button>
           </div>
-          {generating && <p className="text-muted small mt-3 mb-0">Esto tarda entre 15 y 40 segundos.</p>}
+          {generating && <p className="text-muted small mt-3 mb-0">{t('Esto tarda entre 15 y 40 segundos.')}</p>}
         </div>
         {generateModal}
       </div>
@@ -323,23 +328,23 @@ export default function MealPlan() {
       {/* Encabezado */}
       <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
-          <div className="gym-crumb">Alimentación / Plan semanal</div>
-          <h1 className="page-title-sm">Plan semanal</h1>
+          <div className="gym-crumb">{t('Alimentación / Plan semanal')}</div>
+          <h1 className="page-title-sm">{t('Plan semanal')}</h1>
           <div className="gym-meta">
-            <span>Semana del {fmtWeek(plan.weekStart)}</span>
-            <span className="gym-badge" title="Comidas marcadas como hechas">
-              ✓ {eatenCount}/{allMeals.length} hechas · {allMeals.length ? Math.round((eatenCount / allMeals.length) * 100) : 0}%
+            <span>{t('Semana del {{date}}', { date: fmtWeek(plan.weekStart) })}</span>
+            <span className="gym-badge" title={t('Comidas marcadas como hechas')}>
+              ✓ {eatenCount}/{allMeals.length} {t('hechas')} · {allMeals.length ? Math.round((eatenCount / allMeals.length) * 100) : 0}%
             </span>
-            {plan.feedback && <span className="gym-badge" title={plan.feedback}>✎ con tus pedidos</span>}
+            {plan.feedback && <span className="gym-badge" title={plan.feedback}>{t('✎ con tus pedidos')}</span>}
           </div>
         </div>
         <Dropdown className="mt-3" align="end">
           <Dropdown.Toggle disabled={generating}>
-            {generating ? <><Spinner size="sm" /> Generando…</> : 'Nuevo plan'}
+            {generating ? <><Spinner size="sm" /> {t('Generando…')}</> : t('Nuevo plan')}
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item onClick={() => setShowGenerate(true)}>✨ Generar con IA</Dropdown.Item>
-            <Dropdown.Item onClick={createBlank}>✎ Empezar en blanco</Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowGenerate(true)}>{t('✨ Generar con IA')}</Dropdown.Item>
+            <Dropdown.Item onClick={createBlank}>{t('✎ Empezar en blanco')}</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
       </div>
@@ -347,24 +352,24 @@ export default function MealPlan() {
       {!isCurrentWeek && !generating && (
         <div className="meal-banner">
           <span>📅</span>
-          <div><b>Empezó una semana nueva.</b> Generá tu plan actualizado; podés pedirle cambios a la IA.</div>
-          <Button size="sm" onClick={() => setShowGenerate(true)}>Generar</Button>
+          <div><b>{t('Empezó una semana nueva.')}</b> {t('Armá tu plan de esta semana: a mano o con IA.')}</div>
+          <Button size="sm" onClick={() => setShowGenerate(true)}>{t('Generar')}</Button>
         </div>
       )}
-      {generating && <div className="meal-banner"><Spinner size="sm" /><div>Armando tu semana con IA y ajustando porciones… tarda entre 20 y 50 segundos.</div></div>}
+      {generating && <div className="meal-banner"><Spinner size="sm" /><div>{t('Armando tu semana con IA y ajustando porciones… tarda entre 20 y 50 segundos.')}</div></div>}
 
       {/* Vistas */}
       <div className="gym-views">
-        <button className={`gym-view ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>▦ Semana</button>
+        <button className={`gym-view ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>▦ {t('Semana')}</button>
         <button className={`gym-view ${view === 'favs' ? 'active' : ''}`} onClick={() => setView('favs')}>
-          ⭐ Favoritas <span className="gym-badge">{favorites.length}</span>
+          ⭐ {t('Favoritas')} <span className="gym-badge">{favorites.length}</span>
         </button>
-        <button className={`gym-view ${view === 'foods' ? 'active' : ''}`} onClick={() => setView('foods')}>🥫 Alimentos</button>
+        <button className={`gym-view ${view === 'foods' ? 'active' : ''}`} onClick={() => setView('foods')}>🥫 {t('Alimentos')}</button>
         <button className={`gym-view ${view === 'shopping' ? 'active' : ''}`} onClick={() => setView('shopping')}>
-          🛒 Compras <span className="gym-badge">{plan.shoppingList.length}</span>
+          🛒 {t('Compras')} <span className="gym-badge">{plan.shoppingList.length}</span>
         </button>
-        <button className={`gym-view ${view === 'fridge' ? 'active' : ''}`} onClick={() => setView('fridge')}>🧊 ¿Qué cocino?</button>
-        <button className={`gym-view ${view === 'weight' ? 'active' : ''}`} onClick={() => setView('weight')}>⚖️ Peso</button>
+        <button className={`gym-view ${view === 'fridge' ? 'active' : ''}`} onClick={() => setView('fridge')}>🧊 {t('¿Qué cocino?')}</button>
+        <button className={`gym-view ${view === 'weight' ? 'active' : ''}`} onClick={() => setView('weight')}>⚖️ {t('Peso')}</button>
       </div>
 
       {view === 'week' && (
@@ -375,9 +380,9 @@ export default function MealPlan() {
               const done = d.meals.length && d.meals.every((m) => m.eaten);
               return (
                 <button key={d.day} className={`meal-day ${i === dayIndex ? 'active' : ''} ${done ? 'done' : ''}`} onClick={() => setDayIndex(i)}>
-                  <span className="meal-day-name">{shortDay(d.day)}</span>
-                  <span className="meal-day-kcal">{done ? '✓ completo' : kcal}</span>
-                  {isToday(d.day) && <span className="meal-day-today">hoy</span>}
+                  <span className="meal-day-name">{dayShort(d.day)}</span>
+                  <span className="meal-day-kcal">{done ? t('✓ completo') : kcal}</span>
+                  {isToday(d.day) && <span className="meal-day-today">{t('hoy')}</span>}
                 </button>
               );
             })}
@@ -390,7 +395,7 @@ export default function MealPlan() {
           </div>
 
           <h5 className="meal-day-title">
-            {day.day} <span className="text-muted fw-normal small">· {dayEaten} de {day.meals.length} hechas</span>
+            {dayLabel(day.day)} <span className="text-muted fw-normal small">· {t('{{done}} de {{total}} hechas', { done: dayEaten, total: day.meals.length })}</span>
           </h5>
           <div className="meal-grid">
             {day.meals.map((m) => (
@@ -408,18 +413,18 @@ export default function MealPlan() {
               />
             ))}
             <div className="meal-add">
-              {!day.meals.length && <p className="text-muted small mb-2">Este día todavía no tiene comidas.</p>}
+              {!day.meals.length && <p className="text-muted small mb-2">{t('Este día todavía no tiene comidas.')}</p>}
               <div className="d-flex gap-2 flex-wrap justify-content-center">
-                <Button variant="light" size="sm" onClick={() => setEditor({ type: missingTypes[0] ?? 'almuerzo' })}>+ Agregar comida</Button>
-                <Button variant="light" size="sm" onClick={() => setPicker(true)}>⭐ De favoritas</Button>
+                <Button variant="light" size="sm" onClick={() => setEditor({ type: missingTypes[0] ?? 'almuerzo' })}>{t('+ Agregar comida')}</Button>
+                <Button variant="light" size="sm" onClick={() => setPicker(true)}>{t('⭐ De favoritas')}</Button>
                 <Dropdown>
                   <Dropdown.Toggle variant="light" size="sm" disabled={!!suggesting}>
-                    {suggesting ? <><Spinner size="sm" /> Pensando {suggesting}…</> : '✨ Sugerir con IA'}
+                    {suggesting ? <><Spinner size="sm" /> {t('Pensando…')}</> : t('✨ Sugerir con IA')}
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
-                    {[...missingTypes, ...MEAL_TYPES.filter((t) => !missingTypes.includes(t))].map((t) => (
-                      <Dropdown.Item key={t} onClick={() => suggestMeal(t)} className="text-capitalize">
-                        {t}{missingTypes.includes(t) ? ' · falta' : ''}
+                    {[...missingTypes, ...MEAL_TYPES.filter((ty) => !missingTypes.includes(ty))].map((ty) => (
+                      <Dropdown.Item key={ty} onClick={() => suggestMeal(ty)} className="text-capitalize">
+                        {mealTypeLabel(ty)}{missingTypes.includes(ty) ? ` · ${t('falta')}` : ''}
                       </Dropdown.Item>
                     ))}
                   </Dropdown.Menu>

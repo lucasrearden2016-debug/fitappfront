@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Form } from 'react-bootstrap';
 import api from '../../api/client';
 import { foodLabel } from '../../utils/foods';
+import { fmtNum } from '../../utils/num';
+import { useTranslation } from 'react-i18next';
 
 // Input de ingrediente con buscador de la base de alimentos
 export default function FoodSearch({ value, linked, onType, onPick, onCreate, onEnter }) {
+  const { t } = useTranslation();
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -41,7 +44,7 @@ export default function FoodSearch({ value, linked, onType, onPick, onCreate, on
     <div className="food-search">
       <Form.Control
         size="sm"
-        placeholder="Ingrediente (buscá en Alimentos)"
+        placeholder={t('Ingrediente (buscá en Alimentos)')}
         value={value}
         className={linked ? 'is-linked' : ''}
         onChange={(e) => {
@@ -66,11 +69,11 @@ export default function FoodSearch({ value, linked, onType, onPick, onCreate, on
           {results.map((f, i) => (
             <li key={f._id} className={i === active ? 'active' : ''} onMouseDown={(e) => { e.preventDefault(); pick(f); }}>
               <span className="fr-name">{foodLabel(f)}</span>
-              <span className="fr-meta">{Math.round(f.calories)} kcal · P {f.protein} /100{f.baseUnit}</span>
+              <span className="fr-meta">{Math.round(f.calories)} kcal · P {fmtNum(f.protein)} /100{f.baseUnit}</span>
             </li>
           ))}
           <li className={`fr-create ${active === results.length ? 'active' : ''}`} onMouseDown={(e) => { e.preventDefault(); setOpen(false); onCreate(value); }}>
-            + Crear “{value.trim()}” en Alimentos
+            {t('+ Crear “{{q}}” en Alimentos', { q: value.trim() })}
           </li>
         </ul>
       )}

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Button, Modal, Spinner } from 'react-bootstrap';
 import { mealStyle, sumMacros } from './mealUtils';
+import { dayLabel, mealTypeLabel } from '../../i18n/labels';
+import { useTranslation } from 'react-i18next';
+
+const typeLabel = (ty, t) => (ty === 'todas' ? t('todas') : mealTypeLabel(ty));
 
 // Elegir una favorita para el día, viendo cuánto falta para llegar al objetivo
 export default function FavoritePicker({ show, onHide, day, targets, favorites, defaultType, onPick, onCreate }) {
+  const { t } = useTranslation();
   const [type, setType] = useState('todas');
   const [adding, setAdding] = useState(null);
 
@@ -37,11 +42,11 @@ export default function FavoritePicker({ show, onHide, day, targets, favorites, 
   return (
     <Modal show={show} onHide={onHide} scrollable fullscreen="sm-down" className="fav-picker">
       <Modal.Header closeButton>
-        <Modal.Title as="h5">⭐ Agregar desde favoritas · {day.day}</Modal.Title>
+        <Modal.Title as="h5">{t('⭐ Agregar desde favoritas')} · {dayLabel(day.day)}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <div className="picker-left">
-          <span className="text-muted small">Te falta para hoy</span>
+          <span className="text-muted small">{t('Te falta para hoy')}</span>
           <div className="picker-left-values">
             {[['calories', 'kcal'], ['protein', 'P'], ['carbs', 'C'], ['fat', 'G']].map(([k, label]) => (
               <span key={k} className={left[k] < 0 ? 'over' : ''}>
@@ -53,14 +58,14 @@ export default function FavoritePicker({ show, onHide, day, targets, favorites, 
 
         {favorites.length === 0 ? (
           <div className="text-center py-4">
-            <p className="text-muted">Todavía no tenés favoritas.</p>
-            <Button variant="light" onClick={onCreate}>+ Crear una favorita</Button>
+            <p className="text-muted">{t('Todavía no tenés favoritas.')}</p>
+            <Button variant="light" onClick={onCreate}>{t('+ Crear una favorita')}</Button>
           </div>
         ) : (
           <>
             <div className="segmented mb-2">
-              {['todas', ...types].map((t) => (
-                <button key={t} type="button" className={t === type ? 'active' : ''} onClick={() => setType(t)}>{t}</button>
+              {['todas', ...types].map((ty) => (
+                <button key={ty} type="button" className={ty === type ? 'active' : ''} onClick={() => setType(ty)}>{typeLabel(ty, t)}</button>
               ))}
             </div>
             <ul className="picker-list">
@@ -73,7 +78,7 @@ export default function FavoritePicker({ show, onHide, day, targets, favorites, 
                       <div className="picker-name">{f.name}</div>
                       <div className="picker-macros">
                         {Math.round(f.calories)} kcal · P {Math.round(f.protein)} · C {Math.round(f.carbs)} · G {Math.round(f.fat)}
-                        {!fits(f) && <span className="picker-warn"> · te pasás</span>}
+                        {!fits(f) && <span className="picker-warn"> · {t('te pasás')}</span>}
                       </div>
                     </div>
                     <Button size="sm" variant={fits(f) ? 'primary' : 'light'} disabled={!!adding} onClick={() => pick(f)}>
@@ -87,7 +92,7 @@ export default function FavoritePicker({ show, onHide, day, targets, favorites, 
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="light" onClick={onHide}>Listo</Button>
+        <Button variant="light" onClick={onHide}>{t('Listo')}</Button>
       </Modal.Footer>
     </Modal>
   );

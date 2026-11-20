@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Input de etiquetas estilo LinkedIn: escribís, Enter (o coma) y queda como chip.
 export default function TagInput({ value = [], onChange, placeholder, suggestions = [], variant = 'neutral', max = 60 }) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
 
   const add = (raw) => {
@@ -37,7 +39,7 @@ export default function TagInput({ value = [], onChange, placeholder, suggestion
         {value.map((tag, i) => (
           <span className="tag-chip" key={tag}>
             {tag}
-            <button type="button" aria-label={`Quitar ${tag}`} onClick={() => remove(i)}>×</button>
+            <button type="button" aria-label={`${t('Quitar')} ${tag}`} onClick={() => remove(i)}>×</button>
           </span>
         ))}
         <input
