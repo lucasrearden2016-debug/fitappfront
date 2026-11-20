@@ -298,3 +298,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .lang-toggle { width: auto; padding: 0 0.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; }
 .lang-toggle::after { display: none; }
+
+.lang-toggle { color: var(--app-muted) !important; background: none !important; border: 0 !important; }
+.lang-toggle:hover, .lang-toggle.show { color: var(--app-text) !important; background: var(--app-hover) !important; }
+.lang-toggle::after { display: none; }
